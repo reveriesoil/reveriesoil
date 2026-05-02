@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- 星光/魔法图标：四角星 + 光点装饰 -->
+  <path d="M24 4 L26.5 21.5 L44 24 L26.5 26.5 L24 44 L21.5 26.5 L4 24 L21.5 21.5 Z" fill="#a78bfa"/>
+  <!-- 小装饰光点 -->
+  <circle cx="38" cy="10" r="2.5" fill="#c4b5fd" opacity="0.8"/>
+  <circle cx="10" cy="38" r="2" fill="#7c6cfc" opacity="0.7"/>
+  <circle cx="40" cy="38" r="1.5" fill="#c4b5fd" opacity="0.5"/>
+  <circle cx="10" cy="12" r="1.5" fill="#a78bfa" opacity="0.6"/>
+</svg>

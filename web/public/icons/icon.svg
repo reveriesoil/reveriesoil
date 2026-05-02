@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f0a2e"/>
+  <!-- 书本 -->
+  <rect x="120" y="160" width="272" height="200" rx="12" fill="none" stroke="#7c6cfc" stroke-width="12"/>
+  <line x1="256" y1="160" x2="256" y2="360" stroke="#7c6cfc" stroke-width="12"/>
+  <!-- 魔法光芒 -->
+  <circle cx="256" cy="256" r="30" fill="#a78bfa" opacity="0.9"/>
+  <path d="M256 200 L263 238 L300 238 L272 260 L283 298 L256 276 L229 298 L240 260 L212 238 L249 238 Z" fill="#c4b5fd" opacity="0.85"/>
+  <!-- 书页线条 -->
+  <line x1="150" y1="220" x2="240" y2="220" stroke="#4a36b8" stroke-width="6" stroke-linecap="round"/>
+  <line x1="150" y1="245" x2="230" y2="245" stroke="#4a36b8" stroke-width="6" stroke-linecap="round"/>
+  <line x1="272" y1="220" x2="362" y2="220" stroke="#4a36b8" stroke-width="6" stroke-linecap="round"/>
+  <line x1="282" y1="245" x2="362" y2="245" stroke="#4a36b8" stroke-width="6" stroke-linecap="round"/>
+  <!-- 光点 -->
+  <circle cx="180" cy="140" r="6" fill="#a78bfa" opacity="0.6"/>
+  <circle cx="340" cy="130" r="4" fill="#c4b5fd" opacity="0.5"/>
+  <circle cx="370" cy="380" r="5" fill="#7c6cfc" opacity="0.5"/>
+  <circle cx="140" cy="390" r="3" fill="#a78bfa" opacity="0.4"/>
+</svg>

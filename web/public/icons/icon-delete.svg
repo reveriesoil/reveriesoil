@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- 删除图标：垃圾桶 -->
+  <line x1="10" y1="14" x2="38" y2="14" stroke="#7c6cfc" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M18 14 L18 10 Q18 8 20 8 L28 8 Q30 8 30 10 L30 14" fill="none" stroke="#7c6cfc" stroke-width="2"/>
+  <rect x="13" y="14" width="22" height="24" rx="3" fill="none" stroke="#7c6cfc" stroke-width="2.5"/>
+  <line x1="19" y1="21" x2="19" y2="32" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+  <line x1="24" y1="21" x2="24" y2="32" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+  <line x1="29" y1="21" x2="29" y2="32" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+</svg>
