@@ -83,12 +83,14 @@ npm run dev
 
 ---
 
-## 开发路线图
+## 后续更新
 
-- [x] **v0.1.0** — 前端 UI 发布（页面、组件、API 层）
-- [ ] **v0.2.0** — 后端开源版（FastAPI + SQLite，无外部依赖）
-- [ ] **v0.3.0** — Docker 一键部署包
-- [ ] **v0.4.0** — 桌面端安装包（Electron / Tauri）
+| 版本 | 主要内容 |
+|------|----------|
+| v0.1.0 | 前端 UI 发布（页面、组件、API 层） |
+| v0.2.0 | 后端开源版（FastAPI + SQLite，无需 Redis/PostgreSQL） |
+| v0.3.0 | Docker 一键部署包，本地开箱即用 |
+| v0.4.0 | 桌面端安装包（Electron / Tauri） |
 
 ---
 
@@ -106,4 +108,4 @@ npm run dev
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 [WeiCui / 微萃科技](https://github.com/reveriesoil)
+[MIT](LICENSE) © 2026 WeiCui / 微萃科技
