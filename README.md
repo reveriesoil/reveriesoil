@@ -4,7 +4,7 @@
 
 输入一段提示词，AI 自动为你创作故事剧本、角色立绘与配音，并生成一部可在浏览器中直接游玩的视觉小说。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Source%20Available-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0--web-blue.svg)](https://github.com/reveriesoil/reveriesoil/releases)
 
 ---
@@ -87,10 +87,10 @@ npm run dev
 
 | 版本 | 主要内容 |
 |------|----------|
-| v0.1.0 | 前端 UI 发布（页面、组件、API 层） |
-| v0.2.0 | 后端开源版（FastAPI + SQLite，无需 Redis/PostgreSQL） |
-| v0.3.0 | Docker 一键部署包，本地开箱即用 |
-| v0.4.0 | 桌面端安装包（Electron / Tauri） |
+| v0.1.0 | 前端 UI 发布 |
+| v0.2.0 | 后端开源版 |
+| v0.3.0 | Docker 一键部署包 |
+| v0.4.0 | 桌面端安装包 |
 
 ---
 
@@ -108,4 +108,6 @@ npm run dev
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 WeiCui / 微萃科技
+[Source Available License](LICENSE) © 2026 WeiCui / 微萃科技
+
+个人学习与游玩免费，商业使用请联系 reveriesoil@163.com

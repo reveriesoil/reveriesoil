@@ -1,21 +1,60 @@
-MIT License
+ReverieSoil Source Available License
 
-Copyright (c) 2026 WeiCui / 微萃科技
+Copyright (c) 2026 WeiCui / 微萃科技. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+版权声明 / Copyright Notice
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+本软件及其全部源代码的版权归 WeiCui / 微萃科技所有。
+
+Copyright of this software and all its source code belongs to WeiCui / 微萃科技.
+
+---
+
+允许的使用 / Permitted Use
+
+在遵守本协议的前提下，任何人可以免费：
+- 查看、下载、运行本软件用于个人学习或娱乐目的
+- 在不分发、不盈利的前提下修改本软件用于个人使用
+
+Subject to the terms of this License, any person may, free of charge:
+- View, download, and run the Software for personal, non-commercial, or
+  educational purposes, including playing generated visual novels
+- Modify the Software for personal use, provided such modifications are
+  not distributed or used for commercial gain
+
+---
+
+禁止的使用 / Prohibited Use
+
+未经 WeiCui / 微萃科技书面授权，任何个人或组织不得：
+- 将本软件或其衍生版本用于任何商业目的（含付费服务、广告变现、集成进商业产品等）
+- 将本软件或其衍生版本公开分发、出售或再授权
+- 以本软件为基础搭建面向公众的托管服务
+
+Without prior written authorization from WeiCui / 微萃科技, no individual or
+organization may:
+- Use the Software or any derivative works for any commercial purpose,
+  including but not limited to paid services, advertising monetization,
+  or integration into commercial products
+- Publicly distribute, sell, or sublicense the Software or any derivative
+  works
+- Build and operate a hosted service based on the Software for public use
+
+---
+
+商业授权 / Commercial Licensing
+
+如需商业使用，请联系：reveriesoil@163.com
+
+For commercial licensing inquiries, contact: reveriesoil@163.com
+
+---
+
+免责声明 / Disclaimer
+
+本软件按"现状"提供，不附带任何明示或暗示的保证。作者不对因使用本软件
+产生的任何损失承担责任。
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
