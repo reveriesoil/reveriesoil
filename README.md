@@ -5,7 +5,7 @@
 输入一段提示词，AI 自动为你创作故事剧本、角色立绘与配音，并生成一部可在浏览器中直接游玩的视觉小说。
 
 [![License](https://img.shields.io/badge/License-Source%20Available-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0--web-blue.svg)](https://github.com/reveriesoil/reveriesoil/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0--backend-blue.svg)](https://github.com/reveriesoil/reveriesoil/releases)
 
 ---
 
@@ -21,10 +21,9 @@
 
 ## 当前版本
 
-**v0.1.0 · Web Preview**
+**v0.2.0 · Backend Release**
 
-> 当前版本为前端预览阶段，**需要配合后端服务**才能完整运行。  
-> 后端开源版（SQLite + FastAPI，无需 Redis/PostgreSQL）将在后续版本发布。
+后端开源版（SQLite + FastAPI，**无需 Redis/PostgreSQL**），可与前端配合本地运行完整服务。
 
 ---
 
@@ -40,6 +39,15 @@ reveriesoil/
 │   │   └── types.ts     # 类型定义
 │   ├── public/
 │   └── package.json
+├── backend/      # 后端（FastAPI + SQLite，开箱即用）
+│   ├── app/
+│   │   ├── routers/     # API 路由
+│   │   ├── services/    # AI 调用 / 任务处理
+│   │   └── models/      # 数据模型
+│   ├── server.py        # 启动入口
+│   ├── requirements.txt
+│   ├── .env.example     # 环境变量示例
+│   └── Dockerfile
 ├── data/         # 运行时数据目录（生成后创建）
 └── README.md
 ```
@@ -59,6 +67,23 @@ npm run dev
 访问 [http://localhost:5173](http://localhost:5173)
 
 > 前端默认将 API 请求代理到 `http://localhost:8000`，需要本地运行后端服务。
+
+---
+
+## 本地开发（后端）
+
+```bash
+cd reveriesoil/backend
+
+# 复制并配置环境变量
+cp .env.example .env
+# 编辑 .env 填入你的 AI API Key
+
+pip install -r requirements.txt
+python server.py
+```
+
+后端默认监听 `http://localhost:8000`，数据存储在本地 SQLite 文件。
 
 ---
 
@@ -87,8 +112,8 @@ npm run dev
 
 | 版本 | 主要内容 |
 |------|----------|
-| v0.1.0 | 前端 UI 发布 |
-| v0.2.0 | 后端开源版 |
+| v0.1.0 | 前端 UI 发布 ✅ |
+| v0.2.0 | 后端开源版 ✅ |
 | v0.3.0 | Docker 一键部署包 |
 | v0.4.0 | 桌面端安装包 |
 
