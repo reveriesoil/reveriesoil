@@ -1,0 +1,28 @@
+{
+  "appId": "com.dreamit.reveriesoil.mobile",
+  "appName": "ReverieSoil",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#1a1108",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#1a1108",
+      "overlaysWebView": false
+    },
+    "ScreenOrientation": {
+      "default": "landscape"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    volumes:
+      - ./data/db:/app/data
+      - ./data/static:/app/static
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/dreamit.db
+      - STATIC_DIR=/app/static
+      - FRONTEND_URL=http://localhost:3000
+      - CORS_ALLOW_ORIGINS=http://localhost:3000,http://web:80
+    ports:
+      - "8001:8000"
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

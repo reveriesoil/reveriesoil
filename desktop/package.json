@@ -1,0 +1,70 @@
+{
+  "name": "reveriesoil-desktop",
+  "version": "0.34.0",
+  "description": "ReverieSoil - AI Visual Novel Generator (Desktop)",
+  "author": "Dream It Team",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start":        "electron .",
+    "pack":         "electron-builder --dir",
+    "dist":         "electron-builder",
+    "dist:win":     "electron-builder --win",
+    "postinstall":  "electron-builder install-app-deps"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron":         "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId":        "com.dreamit.reveriesoil",
+    "productName":  "ReverieSoil",
+    "copyright":    "Copyright (C) 2025 Dream It Team",
+    "artifactName": "${productName}-${version}-setup.${ext}",
+    "electronDist": "node_modules/electron/dist",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "web-dist/**/*",
+      "build/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist/server",
+        "to":   "backend/server",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick":                           false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut":              true,
+      "createStartMenuShortcut":            true,
+      "shortcutName":                       "ReverieSoil",
+      "installerHeaderIcon":                "build/icon.ico",
+      "deleteAppDataOnUninstall":           false
+    }
+  }
+}

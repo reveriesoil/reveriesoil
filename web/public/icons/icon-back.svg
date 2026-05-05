@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- 返回图标：左箭头 -->
+  <line x1="36" y1="24" x2="12" y2="24" stroke="#7c6cfc" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="20,14 10,24 20,34" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 强制横屏：width=device-height 让竖屏时也以横屏尺寸渲染 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="screen-orientation" content="landscape" />
+    <meta name="x5-orientation" content="landscape" />
+    <meta name="full-screen" content="yes" />
+    <meta name="x5-fullscreen" content="true" />
+    <meta name="theme-color" content="#1a1108" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>ReverieSoil 梦壤</title>
+    <link rel="icon" type="image/png" href="./icon.png" />
+    <style>
+      /* 横屏锁定：CSS 层兜底，竖屏时提示用户旋转 */
+      #orientation-hint {
+        display: none;
+        position: fixed; inset: 0; z-index: 9999;
+        background: #1a1108;
+        color: #c9a96e;
+        font-family: -apple-system, sans-serif;
+        font-size: 18px;
+        align-items: center; justify-content: center;
+        flex-direction: column; gap: 16px;
+        text-align: center; padding: 24px;
+      }
+      #orientation-hint svg { opacity: 0.7; animation: rot 1.5s ease-in-out infinite alternate; }
+      @keyframes rot { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+      @media (orientation: portrait) {
+        #orientation-hint { display: flex; }
+        #root { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 竖屏提示 -->
+    <div id="orientation-hint" aria-live="polite">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="14" width="36" height="48" rx="5" stroke="#c9a96e" stroke-width="3"/>
+        <rect x="22" y="6" width="48" height="36" rx="5" stroke="#c9a96e" stroke-width="3" stroke-dasharray="5 3"/>
+        <path d="M52 18 L58 24 L52 30" stroke="#c9a96e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>请旋转设备至横屏模式</span>
+      <span style="font-size:13px;opacity:0.6">ReverieSoil 梦壤为横屏游戏体验优化</span>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

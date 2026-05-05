@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# 环境变量（含密钥，不入库）
+.env
+*.env
+!.env.example
+
+# 运行时数据库（用户数据）
+data/db/*.db
+backend/test_dreamit.db
+*.db
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 前端构建产物
+web/dist/
+web/.vite/
+
+# Electron 桌面端构建产物
+desktop/node_modules/
+desktop/web-dist/
+desktop/backend-dist/
+desktop/dist-installer/
+desktop/dist-v*/
+desktop/pyinstaller-work/
+desktop/build/*.ico
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log

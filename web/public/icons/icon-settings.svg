@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- 设置图标：齿轮 + 中心圆 -->
+  <circle cx="24" cy="24" r="7" fill="none" stroke="#a78bfa" stroke-width="2.5"/>
+  <path d="
+    M24 6 L26.5 12 A12 12 0 0 1 35.5 16 L41.5 14 L44 20 L39 23 A12 12 0 0 1 39 25 L44 28 L41.5 34 L35.5 32 A12 12 0 0 1 26.5 36 L24 42 L21.5 36 A12 12 0 0 1 12.5 32 L6.5 34 L4 28 L9 25 A12 12 0 0 1 9 23 L4 20 L6.5 14 L12.5 16 A12 12 0 0 1 21.5 12 Z
+  " fill="none" stroke="#7c6cfc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="24" cy="24" r="3" fill="#c4b5fd"/>
+</svg>
