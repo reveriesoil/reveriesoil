@@ -3,6 +3,7 @@
  * 替代 Python 版 GenerationOrchestrator，在设备上直接调用 AI API
  * 全流程：文本大纲 → 艺术设计 → 分镜 → 图片生成 → 存储
  */
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { nanoid } from 'nanoid'
 import {
   createGame,
@@ -29,6 +30,21 @@ import {
   type ImageModelCfg,
 } from './imageGen'
 
+// ── 后台保活（Android 前台服务）────────────────────────────────────────────────
+interface _BackgroundModePlugin { enable(): Promise<void>; disable(): Promise<void> }
+const _BackgroundMode = registerPlugin<_BackgroundModePlugin>('BackgroundMode')
+
+async function enableBackground(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try { await _BackgroundMode.enable() } catch { /* ignore */ }
+  }
+}
+async function disableBackground(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try { await _BackgroundMode.disable() } catch { /* ignore */ }
+  }
+}
+
 // ── 类型 ─────────────────────────────────────────────────────────────────────
 
 export interface StorySpec {
@@ -54,6 +70,29 @@ export interface ProgressUpdate {
 }
 
 export type ProgressCallback = (update: ProgressUpdate) => void
+
+// ── 图片压缩（PNG → JPEG，节省 IndexedDB 存储配额）────────────────────────────
+
+async function compressDataUrl(dataUrl: string, quality = 0.75): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(dataUrl); return }
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      } catch {
+        resolve(dataUrl)
+      }
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
 
 // ── 编排器 ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +140,9 @@ export async function runGeneration(opts: {
     updated_at: now,
   }
   await createGame(record)
+
+  // 启动前台服务，防止 Android 在后台暂停 JS 执行
+  await enableBackground()
 
   const manifest: AssetsManifest = {
     portraits: {}, backgrounds: {}, cg: {}, voices: {},
@@ -164,8 +206,9 @@ export async function runGeneration(opts: {
         portraitTasks.push(
           generatePortrait(exprAppearance, expr, globalStyle, imageCfg)
             .then(async dataUrl => {
-              manifest.portraits[cid][expr] = dataUrl
-              await putAsset(gameId, `portraits/${cid}_${expr}.png`, dataUrl)
+              const compressed = await compressDataUrl(dataUrl)
+              manifest.portraits[cid][expr] = compressed
+              await putAsset(gameId, `portraits/${cid}_${expr}.jpg`, compressed)
             })
             .catch(e => { console.warn(`Portrait ${cid}/${expr} failed:`, e) }),
         )
@@ -188,8 +231,9 @@ export async function runGeneration(opts: {
       bgTasks.push(
         generateBackground(bgDesc, globalStyle, 'landscape', imageCfg)
           .then(async dataUrl => {
-            manifest.backgrounds[sid] = dataUrl
-            await putAsset(gameId, `backgrounds/${sid}.png`, dataUrl)
+            const compressed = await compressDataUrl(dataUrl)
+            manifest.backgrounds[sid] = compressed
+            await putAsset(gameId, `backgrounds/${sid}.jpg`, compressed)
           })
           .catch(e => { console.warn(`Background ${sid} failed:`, e) }),
       )
@@ -210,7 +254,7 @@ export async function runGeneration(opts: {
       const details: string[] = []
       if (missingPortraits.length) details.push('缺少角色立绘：' + missingPortraits.slice(0, 5).join('、'))
       if (missingBgs.length) details.push('缺少场景背景：' + missingBgs.slice(0, 5).join('、'))
-      throw new Error('关键图片素材生成不完整：' + details.join('；') + '。请检查图像模型配置后重试。')
+      console.warn('部分图片素材生成不完整：' + details.join('；') + '。继续生成剩余内容。')
     }
     progress('backgrounds', 70, imageCfg.model)
 
@@ -225,8 +269,9 @@ export async function runGeneration(opts: {
       cgTasks.push(
         generateCG(cgPrompt, imageCfg)
           .then(async dataUrl => {
-            manifest.cg[cid] = dataUrl
-            await putAsset(gameId, `cg/${cid}.png`, dataUrl)
+            const compressed = await compressDataUrl(dataUrl)
+            manifest.cg[cid] = compressed
+            await putAsset(gameId, `cg/${cid}.jpg`, compressed)
           })
           .catch(e => { console.warn(`CG ${cid} failed:`, e) }),
       )
@@ -238,11 +283,12 @@ export async function runGeneration(opts: {
     progress('cover', 90, imageCfg.model)
     let coverUrl = ''
     try {
-      coverUrl = await generateCover(
+      const rawCover = await generateCover(
         String(script['title'] ?? ''), String(script['synopsis'] ?? ''), globalStyle, imageCfg,
       )
+      coverUrl = await compressDataUrl(rawCover)
       manifest.cover = coverUrl
-      await putAsset(gameId, 'cover.png', coverUrl)
+      await putAsset(gameId, 'cover.jpg', coverUrl)
     } catch (e) {
       console.warn('Cover generation failed:', e)
     }
@@ -259,11 +305,13 @@ export async function runGeneration(opts: {
     })
 
     progress('done', 100)
+    await disableBackground()
     return { gameId }
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e)
     await updateGame(gameId, { status: 'error', error_msg: errMsg })
     onProgress?.({ step: 'error', progress: 0, error: errMsg })
+    await disableBackground()
     throw e
   }
 }

@@ -194,14 +194,9 @@ export interface TextModelCfg {
 // ── 辅助函数 ─────────────────────────────────────────────────────────────────
 
 const KIMI_K2_HINTS = ['kimi-k2', 'kimi-thinking', 'moonshot-thinking']
-const DEEPSEEK_V4_HINTS = ['deepseek-v4']
 
 function isKimiK2(model: string): boolean {
   return KIMI_K2_HINTS.some(h => model.toLowerCase().includes(h))
-}
-
-function isDeepseekV4(model: string): boolean {
-  return DEEPSEEK_V4_HINTS.some(h => model.toLowerCase().includes(h))
 }
 
 function normalizeTemperature(model: string, t: number): number {
@@ -209,11 +204,9 @@ function normalizeTemperature(model: string, t: number): number {
   return t
 }
 
-function modelExtraBody(model: string): Record<string, unknown> {
-  if (isKimiK2(model) || isDeepseekV4(model)) {
-    return { thinking: { type: 'disabled' } }
-  }
-  return {}
+function modelExtraBody(_model: string): Record<string, unknown> {
+  // 全局禁用 thinking 模式，避免 tool_call 在思考模型上失败
+  return { thinking: { type: 'disabled' } }
 }
 
 function targetSceneCount(storySpec: Record<string, unknown>): number {

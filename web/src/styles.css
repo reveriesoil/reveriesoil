@@ -2574,6 +2574,31 @@ tbody tr:hover { background: var(--surface2); }
 .uh-card:hover .uh-del-btn { opacity: 1; pointer-events: auto; }
 .uh-del-btn:hover { background: rgba(239,68,68,0.2); color: rgba(239,68,68,1); }
 
+/* 导出按钮 - 卡片右上角 hover 显示 */
+.uh-export-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(201,169,110,0.4);
+  background: rgba(201,169,110,0.12);
+  color: rgba(201,169,110,0.75);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: background 0.15s, color 0.15s, opacity 0.2s;
+}
+.uh-card:hover .uh-export-btn { opacity: 1; pointer-events: auto; }
+.uh-export-btn:hover { background: rgba(201,169,110,0.25); color: rgba(201,169,110,1); }
+.uh-export-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .uh-del-confirm-btn {
   padding: 2px 8px; font-size: 11px; border-radius: 4px;
   background: rgba(239,68,68,0.85); color: #fff; border: none; cursor: pointer;
@@ -2636,6 +2661,17 @@ tbody tr:hover { background: var(--surface2); }
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
+}
+
+/* 导入故事卡片 */
+.uh-card-import {
+  border-color: rgba(100,180,255,0.25);
+  color: rgba(120,180,255,0.7);
+}
+.uh-card-import:hover {
+  border-color: rgba(100,180,255,0.6);
+  color: rgba(140,200,255,1);
+  background: rgba(100,180,255,0.06);
 }
 
 /* 绌烘€?*/

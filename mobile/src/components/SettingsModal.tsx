@@ -126,7 +126,7 @@ function ModelSection({
       {testable && (
         <div className="sm-test-row">
           <button type="button" className={`sm-test-btn${testState.status === 'testing' ? ' sm-test-btn--testing' : ''}`}
-            disabled={testState.status === 'testing'} onClick={handleTest}>
+            disabled={testState.status === 'testing' || !value.api_key.trim() || !value.model.trim()} onClick={handleTest}>
             {testState.status === 'testing' ? <><span className="sm-test-spinner" />测试中…</> : <><IconFlash />测试连接</>}
           </button>
           {testState.status === 'ok' && <span className="sm-test-result sm-test-result--ok"><IconCheck /> {testState.msg}</span>}
@@ -225,7 +225,7 @@ export default function SettingsModal({ open, onClose, onSaved }: {
 
             <div className="sm-banner">
               <IconInfo />
-              <span>开源版不内置任何 API Key，所有凭据由你自行提供。支持 OpenAI、DeepSeek、硅基流动、Kimi 等任何兼容 OpenAI 格式的服务商。</span>
+              <span>支持 OpenAI、DeepSeek、硅基流动、Kimi 等任何兼容 OpenAI 格式的服务商。</span>
             </div>
 
             <form className="sm-body" onSubmit={handleSave}>

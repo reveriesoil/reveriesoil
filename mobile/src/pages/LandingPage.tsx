@@ -161,7 +161,7 @@ export default function LandingPage() {
 
   const menuItems = [
     { icon: <IconPlay />,    label: '开始游戏', onClick: openPanel },
-    { icon: <IconHistory />, label: '历史故事', onClick: () => navigate('/history') },
+    { icon: <IconHistory />, label: '我的故事', onClick: () => navigate('/history') },
   ]
   const containerVariants = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } }
   const itemVariants = {
@@ -227,7 +227,10 @@ export default function LandingPage() {
                 transition={{ type: 'spring', stiffness: 360, damping: 34 }}
               >
                 <div className="setup-header">
-                  <span className="setup-title">开始游戏</span>
+                  <div>
+                    <span className="setup-title">开始游戏</span>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>配置故事风格与生成参数，由 AI 创作专属视觉小说</div>
+                  </div>
                   <button className="setup-close-btn" onClick={closePanel} disabled={loading} aria-label="关闭"><IconClose /></button>
                 </div>
 
@@ -353,6 +356,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="setup-footer">
+                  <button className="setup-cancel-btn" onClick={closePanel} disabled={loading}>取消</button>
                   <motion.button className="setup-submit-btn" onClick={handleSubmit}
                     disabled={loading || !savedConfig || !storyStyle || !artStyle}
                     whileHover={loading ? {} : { scale: 1.02 }}

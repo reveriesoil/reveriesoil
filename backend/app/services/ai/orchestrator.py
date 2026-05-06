@@ -20,6 +20,27 @@ from app.storage.local_storage import upload_bytes
 logger = logging.getLogger(__name__)
 
 
+def _classify_image_error(err_msg: str) -> str:
+    """根据错误消息分类，返回用户可读的原因说明。"""
+    msg = err_msg.lower()
+    if any(k in msg for k in ("overdue", "overdraft", "insufficient", "balance", "欠费", "余额不足", "quota", "exceed")):
+        return "图像模型账户可能已欠费，请登录对应平台充值后重试"
+    if any(k in msg for k in ("timeout", "connection", "network", "connect", "timed out", "reset", "unreachable", "eof", "ssl")):
+        return "网络连接异常，请检查网络后重试"
+    if any(k in msg for k in ("401", "unauthorized", "invalid api key", "authentication")):
+        return "图像模型 API Key 无效或已失效，请检查配置"
+    if any(k in msg for k in ("403", "forbidden", "permission", "disabled", "not allowed")):
+        return "图像模型访问被拒绝，模型可能已下线或无权限使用"
+    if any(k in msg for k in ("429", "rate limit", "too many")):
+        return "图像模型请求频率超限，请稍后重试"
+    if any(k in msg for k in ("500", "502", "503", "server error", "internal error")):
+        return "图像模型服务端错误，请稍后重试"
+    if err_msg:
+        snippet = err_msg[:120].rstrip()
+        return f"图像生成失败，请检查图像模型配置（错误：{snippet}）"
+    return "图像生成失败，请检查图像模型配置后重试"
+
+
 def _check_overdraft(e: Exception) -> None:
     """若异常信息含欠费关键字，转换为 AccountOverdueError 立即中止生成。"""
     msg = str(e).lower()
@@ -134,12 +155,9 @@ class GenerationOrchestrator:
             if isinstance(s, dict) and not backgrounds.get(s.get("id"))
         ]
         if missing_portraits or missing_backgrounds:
-            details = []
-            if missing_portraits:
-                details.append("缺少角色立绘：" + "、".join(missing_portraits[:5]))
-            if missing_backgrounds:
-                details.append("缺少场景背景：" + "、".join(missing_backgrounds[:5]))
-            raise ValueError("关键图片素材生成不完整：" + "；".join(details) + "。请检查图像模型配置后重试。")
+            last_err = manifest.get("_last_image_error", "")
+            reason = _classify_image_error(last_err)
+            raise ValueError(f"图片素材生成失败：{reason}")
 
     async def run(
         self,
@@ -151,6 +169,7 @@ class GenerationOrchestrator:
         character_prompt: str = "",
         on_script_ready=None,
         on_portraits_done=None,
+        on_backgrounds_done=None,
     ) -> Dict[str, Any]:
         ai_config = _normalize_ai_config(ai_config)
         text_cfg = _ensure_dict(ai_config.get("text_model"))
@@ -240,6 +259,12 @@ class GenerationOrchestrator:
         if background_tasks:
             _bg_results = await asyncio.gather(*background_tasks, return_exceptions=True)
             _raise_if_overdraft(_bg_results)
+        # 背景批次完成：在校验报错前触发增量保存回调（断点续传支持）
+        if on_backgrounds_done:
+            try:
+                await on_backgrounds_done(script, assets_manifest)
+            except Exception as _cb_e:
+                logger.warning(f"on_backgrounds_done 回调异常（不中断生成）: {_cb_e}")
         self._validate_required_visual_assets(characters, scenes, assets_manifest)
         await self.update_progress("backgrounds", 65, model=_img_model)
 
@@ -281,6 +306,7 @@ class GenerationOrchestrator:
         script: dict,
         ai_config: dict,
         on_portraits_done=None,
+        on_backgrounds_done=None,
     ) -> Dict[str, Any]:
         """仅重新生成图片资产（剧本已存在）。
         
@@ -357,6 +383,13 @@ class GenerationOrchestrator:
             _b_results = await asyncio.gather(*background_tasks, return_exceptions=True)
             _raise_if_overdraft(_b_results)
 
+        # 背景批次完成：在校验报错前触发增量保存回调
+        if on_backgrounds_done:
+            try:
+                await on_backgrounds_done(script, assets_manifest)
+            except Exception as _cb_e:
+                logger.warning(f"run_image_only on_backgrounds_done 回调异常: {_cb_e}")
+
         await self.update_progress("packaging", 90, model="")
         script = self._inject_asset_urls(script, assets_manifest)
 
@@ -409,6 +442,7 @@ class GenerationOrchestrator:
                     return
         except Exception as e:
             _check_overdraft(e)
+            manifest.setdefault("_last_image_error", str(e))
             logger.warning(f"立绘生成失败 {char_id}/{expr}: {e}")
         manifest["portraits"].setdefault(char_id, {})[expr] = ""
 
@@ -446,6 +480,7 @@ class GenerationOrchestrator:
                     return
         except Exception as e:
             _check_overdraft(e)
+            manifest.setdefault("_last_image_error", str(e))
             logger.warning(f"背景生成失败 {scene_id}: {e}")
         manifest["backgrounds"][scene_id] = ""
 

@@ -311,13 +311,18 @@ export default function GeneratingPage() {
   const isFailed = task?.status === 'failed' || task?.status === 'cancelled'
 
   // 判断每个步骤状态
-  // 注意：不用 progress >= threshold 判断，避免仅图片重试时文本步骤被误标为完成
+  // 续传场景下后端返回的 current_step 已是 portraits/backgrounds 等图像阶段，
+  // 前面的文本步骤都已在前一次任务完成，应自动标记为 done（即便本次任务的 stepHistory 中没有记录）
+  const currentStepIdx = STEPS.findIndex(s => s.key === currentStep)
   const getStepStatus = (step: typeof STEPS[0]) => {
     if (isDone) return 'done'
     if (isFailed && step.key === currentStep) return 'failed'
     if (step.key === currentStep) return 'active'
-    // 只有该步骤实际出现在历史记录中才标记为已完成
+    // 该步骤在本次任务的历史记录中
     if (stepHistory.some(s => s.step === step.key)) return 'done'
+    // 当前 step 之前的步骤（按 STEPS 顺序）：续传时已在前一任务完成
+    const thisIdx = STEPS.findIndex(s => s.key === step.key)
+    if (currentStepIdx > 0 && thisIdx >= 0 && thisIdx < currentStepIdx) return 'done'
     return 'pending'
   }
 

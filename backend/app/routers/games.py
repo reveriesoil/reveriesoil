@@ -416,7 +416,15 @@ async def retry_generation(
             config[block_key] = snap_block
     ai_config = config
 
-    task = GenerationTask(game_id=game.id, status="pending", progress=0)
+    # 创建新任务记录（继承上一个任务的 token_usage，让前端可看到累计消耗）
+    last_task = (await db.execute(
+        select(GenerationTask)
+        .where(GenerationTask.game_id == game_id)
+        .order_by(GenerationTask.created_at.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    inherited_tokens = int(last_task.token_usage or 0) if last_task else 0
+    task = GenerationTask(game_id=game.id, status="pending", progress=0, token_usage=inherited_tokens)
     db.add(task)
     await db.flush()
     await db.commit()
@@ -609,12 +617,37 @@ async def _run_generation_bg(
                 await db.commit()
             logger.info(f"立绘 URL 已增量保存（断点续传）: game={game_id}")
 
+        async def on_backgrounds_done(current_script: dict, manifest: dict):
+            """背景批次完成后增量保存 background_url（断点续传支持）。
+            在校验报错前调用，确保已成功生成的背景不会在重试时重复生成。"""
+            import copy
+            partial = copy.deepcopy(current_script)
+            bgs = manifest.get("backgrounds", {})
+            portraits = manifest.get("portraits", {})
+            for char in partial.get("characters", []):
+                char_id = char.get("id", "")
+                if char_id and char_id in portraits:
+                    char["portrait_urls"] = portraits[char_id]
+            for scene in partial.get("scenes", []):
+                scene_id = scene.get("id", "")
+                if scene_id and bgs.get(scene_id):
+                    scene["background_url"] = bgs[scene_id]
+            async with _Session() as db:
+                await db.execute(
+                    update(Game).where(Game.id == game_id).values(
+                        script_json=partial, updated_at=datetime.utcnow()
+                    )
+                )
+                await db.commit()
+            logger.info(f"背景 URL 已增量保存（断点续传）: game={game_id}")
+
         orchestrator = GenerationOrchestrator(update_progress)
         result = await orchestrator.run(
             game_id, task_id, prompt, ai_config, story_spec,
             character_prompt=character_prompt,
             on_script_ready=on_script_ready,
             on_portraits_done=on_portraits_done,
+            on_backgrounds_done=on_backgrounds_done,
         )
 
         async with _Session() as db:
@@ -733,9 +766,33 @@ async def _run_image_regen_bg(game_id: str, task_id: str):
                 await db.commit()
             logger.info(f"立绘 URL 已增量保存（断点续传）: game={game_id}")
 
+        async def on_backgrounds_done_regen(current_script: dict, manifest: dict):
+            """背景批次完成后增量保存 background_url（断点续传支持）"""
+            import copy
+            partial = copy.deepcopy(script_json_ref)
+            bgs = manifest.get("backgrounds", {})
+            portraits = manifest.get("portraits", {})
+            for char in partial.get("characters", []):
+                char_id = char.get("id", "")
+                if char_id and char_id in portraits:
+                    char["portrait_urls"] = portraits[char_id]
+            for scene in partial.get("scenes", []):
+                scene_id = scene.get("id", "")
+                if scene_id and bgs.get(scene_id):
+                    scene["background_url"] = bgs[scene_id]
+            async with _Session() as db:
+                await db.execute(
+                    update(Game).where(Game.id == game_id).values(
+                        script_json=partial, updated_at=datetime.utcnow()
+                    )
+                )
+                await db.commit()
+            logger.info(f"背景 URL 已增量保存（断点续传）: game={game_id}")
+
         result = await orchestrator.run_image_only(
             game_id, task_id, script_json_ref, snapshot,
             on_portraits_done=on_portraits_done_regen,
+            on_backgrounds_done=on_backgrounds_done_regen,
         )
 
         async with _Session() as db:

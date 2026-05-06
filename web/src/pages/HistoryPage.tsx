@@ -50,14 +50,14 @@ const cardVariants = {
 // ── 图标 ──────────────────────────────────────────────────────────────────────
 const IconExport = () => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 11V3M5 6l3-3 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M3 11v1.5A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
 
 const IconImport = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M8 10V2M5 5l3-3 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 3v8M5 8l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M3 11v1.5A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
@@ -223,21 +223,6 @@ export default function HistoryPage() {
           </button>
           <span className="uh-logo">ReverieSoil</span>
         </div>
-        <div className="uh-topbar-right">
-          <button
-            className="uh-import-btn"
-            onClick={handleImportClick}
-            disabled={importing}
-            title="导入故事文件（.rsz）"
-          >
-            {importing ? (
-              <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-            ) : (
-              <IconImport />
-            )}
-            导入故事
-          </button>
-        </div>
       </header>
 
       {/* 主内容 */}
@@ -290,6 +275,21 @@ export default function HistoryPage() {
                         }
                       />
                       <div className="uh-card-overlay" />
+                      {/* 导出按钮 - 右上角 hover 显示 */}
+                      {g.status === 'ready' && (
+                        <button
+                          className="uh-export-btn"
+                          title="导出故事文件"
+                          onClick={e => handleExport(g, e)}
+                          disabled={exportingId === g.id}
+                        >
+                          {exportingId === g.id ? (
+                            <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                          ) : (
+                            <IconExport />
+                          )}
+                        </button>
+                      )}
                       <div className="uh-card-body">
                         <div className="uh-card-title">{g.title || '未命名故事'}</div>
                         <div className="uh-card-desc">{g.synopsis || g.prompt || '点击查看故事'}</div>
@@ -301,22 +301,6 @@ export default function HistoryPage() {
                             {g.status === 'ready' ? '▶ 继续' : g.status === 'generating' || g.status === 'pending' ? '⏳ 生成中' : isFailedStatus(g.status) ? '↻ 重试' : '查看'}
                           </button>
                           {statusBadge(g.status)}
-                          {/* 导出按钮（仅对已完成的故事显示） */}
-                          {g.status === 'ready' && (
-                            <button
-                              className="uh-del-btn"
-                              title="导出故事文件"
-                              onClick={e => handleExport(g, e)}
-                              disabled={exportingId === g.id}
-                              style={{ color: 'rgba(245,233,182,0.7)' }}
-                            >
-                              {exportingId === g.id ? (
-                                <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                              ) : (
-                                <IconExport />
-                              )}
-                            </button>
-                          )}
                           <button
                             className="uh-del-btn"
                             title="删除故事"
@@ -340,6 +324,28 @@ export default function HistoryPage() {
                   )
                 })}
               </AnimatePresence>
+
+              {/* 导入故事卡片 */}
+              <motion.div
+                className="uh-card-new uh-card-import"
+                variants={cardVariants}
+                onClick={handleImportClick}
+                style={{ opacity: importing ? 0.6 : 1 }}
+              >
+                {importing ? (
+                  <div className="spinner" style={{ width: 28, height: 28, borderWidth: 2 }} />
+                ) : (
+                  <>
+                    <div className="uh-card-new-icon" style={{ fontSize: 28 }}>
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                          <path d="M16 10v12M10 17l6 5 6-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M6 22v3a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="uh-card-new-label">导入故事</div>
+                  </>
+                )}
+              </motion.div>
             </motion.div>
           </>
         )}

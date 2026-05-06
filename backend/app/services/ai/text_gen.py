@@ -68,13 +68,12 @@ def _normalize_temperature(model: str, temperature: float) -> float:
 
 
 def _model_extra_body(model: str) -> Dict[str, Any]:
-    """为部分模型注入非 OpenAI 标准参数。
-    - Kimi K2 系列：thinking=disabled，让 forced tool_choice 与 temperature=0.6 同时合法。
-    - DeepSeek V4 系列：thinking=disabled，避免 forced tool_choice 被 reasoner 路径拒绝。
+    """为所有文本模型统一禁用思考模式。
+    强制 tool_choice 与 thinking 模式不兼容（doubao-seed / kimi-k2 / deepseek-v4 等均受此限制），
+    全局关闭避免 finish_reason=tool_calls 但无 tool call 返回的错误。
+    不支持该参数的模型（如标准 OpenAI 接口）会忽略未知字段，无副作用。
     """
-    if _is_kimi_k2(model) or _is_deepseek_v4(model):
-        return {"thinking": {"type": "disabled"}}
-    return {}
+    return {"thinking": {"type": "disabled"}}
 
 
 def _accumulate_tokens(response) -> None:

@@ -19,7 +19,7 @@
     "StatusBar": {
       "style": "Dark",
       "backgroundColor": "#1a1108",
-      "overlaysWebView": false
+      "overlaysWebView": true
     },
     "ScreenOrientation": {
       "default": "landscape"
