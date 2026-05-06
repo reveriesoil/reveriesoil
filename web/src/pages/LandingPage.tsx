@@ -58,6 +58,7 @@ export default function LandingPage() {
   const [artStyle, setArtStyle]           = useState('')
   const [quickDuration, setQuickDuration] = useState(30)
   const [storyDepth, setStoryDepth]       = useState(2)
+  const [interactionLevel, setInteractionLevel] = useState(3)
   const [savedConfig, setSavedConfig] = useState<AIConfigResponse | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -119,8 +120,9 @@ export default function LandingPage() {
         ai_config: aiConfig,
         story_spec: {
           duration_minutes: quickDuration,
-          branch_enabled:   true,
+          branch_enabled:   interactionLevel >= 2,
           depth: storyDepth,
+          interaction_level: interactionLevel,
           ...(storyTitle.trim() ? { title: storyTitle.trim() } : {}),
         },
       })
@@ -134,7 +136,7 @@ export default function LandingPage() {
 
   const menuItems = [
     { icon: <IconPlay />,    label: '开始游戏', onClick: openPanel },
-    { icon: <IconHistory />, label: '历史故事', onClick: () => navigate('/history') },
+    { icon: <IconHistory />, label: '我的故事', onClick: () => navigate('/history') },
   ]
 
   const containerVariants = {
@@ -261,13 +263,14 @@ export default function LandingPage() {
                   <label className="setup-label">故事时长</label>
                   <div className="uh-depth-btns">
                     {[
-                      { val: 15,  label: '短篇', desc: '~15分钟' },
-                      { val: 30,  label: '标准', desc: '~30分钟' },
-                      { val: 60,  label: '长篇', desc: '~1小时'  },
-                      { val: 120, label: '史诗', desc: '~2小时'  },
+                      { val: 15,  label: '短篇',  desc: '~15分钟',  novel: false },
+                      { val: 30,  label: '标准',  desc: '~30分钟',  novel: false },
+                      { val: 60,  label: '长篇',  desc: '~1小时',   novel: false },
+                      { val: 120, label: '史诗',  desc: '~2小时',   novel: false },
+                      { val: -1,  label: '极致',  desc: '完整小说', novel: true  },
                     ].map(d => (
                       <button key={d.val} type="button"
-                        className={`uh-depth-btn${quickDuration === d.val ? ' uh-depth-btn--active' : ''}`}
+                        className={`uh-depth-btn${quickDuration === d.val ? ' uh-depth-btn--active' : ''}${d.novel ? ' uh-depth-btn--novel' : ''}`}
                         onClick={() => setQuickDuration(d.val)}
                         disabled={loading}
                       >
@@ -291,6 +294,28 @@ export default function LandingPage() {
                       <button key={d.level} type="button"
                         className={`uh-depth-btn${storyDepth === d.level ? ' uh-depth-btn--active' : ''}`}
                         onClick={() => setStoryDepth(d.level)}
+                        disabled={loading}
+                      >
+                        <span className="uh-depth-btn-name">{d.label}</span>
+                        <span className="uh-depth-btn-desc">{d.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="setup-field">
+                  <label className="setup-label">交互程度<span className="setup-optional"> 越高 → 选择节点越多，剧情走向更多元</span></label>
+                  <div className="uh-depth-btns">
+                    {[
+                      { level: 1, label: '沉浸观影', desc: '全程无选择'   },
+                      { level: 2, label: '轻度',     desc: '1 个关键选择' },
+                      { level: 3, label: '标准',     desc: '2-3 个分支'   },
+                      { level: 4, label: '高互动',   desc: '4-5 个分支'   },
+                      { level: 5, label: '极致',     desc: '多结局网状'   },
+                    ].map(d => (
+                      <button key={d.level} type="button"
+                        className={`uh-depth-btn${interactionLevel === d.level ? ' uh-depth-btn--active' : ''}`}
+                        onClick={() => setInteractionLevel(d.level)}
                         disabled={loading}
                       >
                         <span className="uh-depth-btn-name">{d.label}</span>

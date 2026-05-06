@@ -3190,6 +3190,20 @@ tbody tr:hover { background: var(--surface2); }
 .uh-depth-btn-name { font-size: 13px; font-weight: 600; }
 .uh-depth-btn-desc { font-size: 10px; opacity: 0.65; margin-top: 2px; }
 .uh-depth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 极致（完整小说）选项强调色 */
+.uh-depth-btn--novel {
+  border-color: rgba(138,99,210,0.35);
+  color: rgba(178,139,255,0.8);
+}
+.uh-depth-btn--novel:hover:not(:disabled) {
+  border-color: rgba(138,99,210,0.6);
+  color: rgba(178,139,255,1);
+}
+.uh-depth-btn--novel.uh-depth-btn--active {
+  border-color: rgba(138,99,210,0.8);
+  background: rgba(138,99,210,0.12);
+  color: #b28bff;
+}
 
 /* 鈺愨晲鈺?AI 璁剧疆寮圭獥锛圫ettingsModal锛夆€?涓庨」鐩殩妫曢鏍间竴鑷?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?*/
 /* 绫诲墠缂€ sm- 琛ㄧず settings-modal */
