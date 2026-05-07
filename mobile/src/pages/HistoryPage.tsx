@@ -173,7 +173,7 @@ export default function HistoryPage() {
                   {/* 卡片内容 */}
                   <div className="uh-card-body">
                     <div className="uh-card-title">{game.title || '无题故事'}</div>
-                    <div className="uh-card-prompt">{game.prompt}</div>
+                    <div className="uh-card-prompt">{game.synopsis || game.prompt}</div>
                   </div>
 
                   {/* 底部操作 */}

@@ -13,11 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-        <!-- 透明状态栏/导航栏，配合 MainActivity 的 edge-to-edge 设置 -->
+        <!-- 全屏沉浸模式：透明系统栏，配合 MainActivity.hideSystemUI() -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:fitsSystemWindows">false</item>
+        <!-- 全屏标志：启动时立即隐藏系统栏 -->
+        <item name="android:windowFullscreen">true</item>
     </style>
 
 

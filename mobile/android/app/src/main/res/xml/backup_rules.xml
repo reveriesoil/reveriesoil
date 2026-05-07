@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Auto Backup 规则（API 23–30）
+  包含 WebView IndexedDB 和 LocalStorage，卸载重装后可从 Google Drive 恢复数据
+-->
+<full-backup-content>
+    <!-- WebView 存储的 IndexedDB（游戏数据）-->
+    <include domain="root" path="app_webview/Default/IndexedDB" />
+    <!-- WebView LocalStorage（AI 配置等）-->
+    <include domain="root" path="app_webview/Default/Local Storage" />
+    <!-- WebView 通用数据库 -->
+    <include domain="root" path="app_webview/Default/databases" />
+    <!-- App 自有 DB / Preferences -->
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
+    <!-- 排除缓存 -->
+    <exclude domain="cache" path="." />
+    <exclude domain="root" path="app_webview/Default/Cache" />
+    <exclude domain="root" path="app_webview/Default/Code Cache" />
+    <exclude domain="root" path="app_webview/Default/GPUCache" />
+</full-backup-content>

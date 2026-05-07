@@ -44,8 +44,24 @@ export default function GeneratingPage() {
 
   const [progress, setProgress] = useState<ProgressUpdate>(() => getCurrentProgress())
   const [elapsed, setElapsed] = useState(0)
+  const [bgToast, setBgToast] = useState('')
   const startRef = useRef(Date.now())
   const resolvedGameId = useRef<string | null>(null)
+
+  // 后台切换提示
+  useEffect(() => {
+    let wasHidden = false
+    const onVisibility = () => {
+      if (document.hidden) { wasHidden = true }
+      else if (wasHidden) {
+        wasHidden = false
+        setBgToast('⚡ 已返回 — 生成仍在进行中')
+        setTimeout(() => setBgToast(''), 3000)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   // 跟踪实际 gameId（pending 时等 store 更新）
   useEffect(() => {
@@ -115,6 +131,9 @@ export default function GeneratingPage() {
   return (
     <div className="gen-root">
       <div className="gen-bg" />
+
+      {/* 后台返回提示 */}
+      {bgToast && <div className="vn-bg-toast">{bgToast}</div>}
 
       <div className="gen-content">
         <motion.div className="gen-title-area"

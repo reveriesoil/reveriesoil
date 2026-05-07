@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 数据提取规则（API 31+）
+  cloud-backup：卸载后重装从 Google Drive 恢复
+  device-transfer：换机/ADB 迁移时保留数据
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="root" path="app_webview/Default/IndexedDB" />
+        <include domain="root" path="app_webview/Default/Local Storage" />
+        <include domain="root" path="app_webview/Default/databases" />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+        <exclude domain="root" path="app_webview/Default/Cache" />
+        <exclude domain="root" path="app_webview/Default/Code Cache" />
+        <exclude domain="root" path="app_webview/Default/GPUCache" />
+        <exclude domain="cache" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_webview/Default/IndexedDB" />
+        <include domain="root" path="app_webview/Default/Local Storage" />
+        <include domain="root" path="app_webview/Default/databases" />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+        <exclude domain="root" path="app_webview/Default/Cache" />
+        <exclude domain="root" path="app_webview/Default/Code Cache" />
+        <exclude domain="root" path="app_webview/Default/GPUCache" />
+        <exclude domain="cache" path="." />
+    </device-transfer>
+</data-extraction-rules>

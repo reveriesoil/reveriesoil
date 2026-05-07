@@ -71,10 +71,19 @@ const IconBack = () => (
     <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-const IconSave = () => (
+const IconTimeline = () => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-    <path d="M3 2h8l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-    <path d="M5 2v4h6V2M5 9h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <path d="M3 4h10M3 8h7M3 12h9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <circle cx="13" cy="8" r="1.5" fill="currentColor"/>
+  </svg>
+)
+const IconFullscreen = ({ active }: { active: boolean }) => active ? (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <path d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+) : (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 const IconVolume = ({ muted }: { muted: boolean }) => (
@@ -109,16 +118,19 @@ export default function PlayPage() {
   const [sceneId, setSceneId] = useState<string>('')
   const [dialogueIdx, setDialogueIdx] = useState(0)
   const [choicesMade, setChoicesMade] = useState<unknown[]>([])
-  const [_visitedScenes, setVisitedScenes] = useState<Set<string>>(new Set())
+  const [visitedScenes, setVisitedScenes] = useState<Set<string>>(new Set())
   const [playTime, setPlayTime] = useState(0)
   const [gameOver, setGameOver] = useState(false)
-  const [saveMsg, setSaveMsg] = useState('')
+
   const [showSceneTitle, setShowSceneTitle] = useState(false)
   const [currentSceneTitle, setCurrentSceneTitle] = useState('')
   const [showCgOverlay, setShowCgOverlay] = useState(false)
   const [cgOverlayUrl, setCgOverlayUrl] = useState('')
   const [hideUI, setHideUI] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [showStoryline, setShowStoryline] = useState(false)
+  const [bgToast, setBgToast] = useState('')
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // 音频
   const bgmRef = useRef<HTMLAudioElement | null>(null)
@@ -191,6 +203,36 @@ export default function PlayPage() {
   useEffect(() => {
     if (sceneId) setVisitedScenes(prev => new Set([...prev, sceneId]))
   }, [sceneId])
+
+  // ─── 后台切换提示 ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    let wasHidden = false
+    const onVisibility = () => {
+      if (document.hidden) { wasHidden = true }
+      else if (wasHidden) {
+        wasHidden = false
+        setBgToast('已返回游戏')
+        setTimeout(() => setBgToast(''), 2500)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  // ─── 全屏切换 ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {})
+    } else {
+      document.exitFullscreen().catch(() => {})
+    }
+  }
 
   // CG overlay（场景级）
   useEffect(() => {
@@ -349,11 +391,10 @@ export default function PlayPage() {
     else goToNextSequential()
   }
 
-  // ─── 进度保存 ─────────────────────────────────────────────────────────────
-  const handleSave = async () => {
+  // ─── 自动保存进度 ────────────────────────────────────────────────────────
+  const autoSave = useCallback(async () => {
     if (!gameId || !sceneId) return
     try {
-      // 构建简化的 timeline 列表
       const sceneIdx = scenes.findIndex(s => s.id === sceneId)
       const prog: Omit<GameProgressRecord, 'updated_at'> = {
         game_id: gameId,
@@ -361,12 +402,8 @@ export default function PlayPage() {
         timeline: [{ scene_id: sceneId, dialogue_index: dialogueIdx, choices: choicesMade }],
       }
       await saveProgress(prog as GameProgressRecord)
-      setSaveMsg('进度已保存 ✓')
-      setTimeout(() => setSaveMsg(''), 2000)
-    } catch {
-      setSaveMsg('保存失败')
-    }
-  }
+    } catch { /* 忽略保存失败 */ }
+  }, [gameId, sceneId, scenes, dialogueIdx, choicesMade])
 
   // ─── 渲染 ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -506,10 +543,17 @@ export default function PlayPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 className="vn-ctrl-btn"
-                onClick={e => { e.stopPropagation(); handleSave() }}
-                title="保存进度"
+                onClick={e => { e.stopPropagation(); autoSave(); setShowStoryline(true) }}
+                title="故事线"
               >
-                <IconSave /> {saveMsg || '保存'}
+                <IconTimeline /> 故事线
+              </button>
+              <button
+                className="vn-ctrl-btn"
+                onClick={e => { e.stopPropagation(); toggleFullscreen() }}
+                title={isFullscreen ? '退出全屏' : '全屏'}
+              >
+                <IconFullscreen active={isFullscreen} />
               </button>
               <button
                 className="vn-mute-btn"
@@ -523,23 +567,25 @@ export default function PlayPage() {
         )}
       </AnimatePresence>
 
-      {/* 场景标题浮层 */}
+      {/* 场景标题浮层 — 全屏电影式 */}
       <AnimatePresence>
         {showSceneTitle && (
           <motion.div
             className="vn-scene-title"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.4 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
           >
+            <div className="vn-scene-title-divider" />
             <div className="vn-scene-title-text">{currentSceneTitle}</div>
+            <div className="vn-scene-title-divider" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 左侧立绘 */}
-      {leftPortrait && !hideUI && (
+      {/* 左侧立绘 — 场景标题期间隐藏 */}
+      {leftPortrait && !hideUI && !showSceneTitle && (
         <AnimatePresence>
           <motion.div
             className="vn-char-left"
@@ -558,8 +604,8 @@ export default function PlayPage() {
         </AnimatePresence>
       )}
 
-      {/* 右侧立绘 */}
-      {rightPortrait && !hideUI && (
+      {/* 右侧立绘 — 场景标题期间隐藏 */}
+      {rightPortrait && !hideUI && !showSceneTitle && (
         <AnimatePresence>
           <motion.div
             className="vn-char-right"
@@ -578,8 +624,64 @@ export default function PlayPage() {
         </AnimatePresence>
       )}
 
-      {/* 对话框 */}
-      {!hideUI && currentDialogue && (
+      {/* 后台返回提示 */}
+      {bgToast && (
+        <div className="vn-bg-toast">{bgToast}</div>
+      )}
+
+      {/* 故事线面板 */}
+      <AnimatePresence>
+        {showStoryline && (
+          <motion.div
+            className="vn-storyline-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setShowStoryline(false)}
+          >
+            <motion.div
+              className="vn-storyline-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="vn-storyline-header">
+                <span className="vn-storyline-title">故事线</span>
+                <button className="vn-storyline-close" onClick={() => setShowStoryline(false)}>✕</button>
+              </div>
+              <div className="vn-storyline-body">
+                {scenes.map((s, i) => {
+                  const visited = visitedScenes.has(s.id)
+                  const current = s.id === sceneId
+                  return (
+                    <button
+                      key={s.id}
+                      className={`vn-storyline-item${current ? ' vn-storyline-item--current' : ''}${!visited && !current ? ' vn-storyline-item--locked' : ''}`}
+                      disabled={!visited && !current}
+                      onClick={() => {
+                        if (current) { setShowStoryline(false); return }
+                        if (visited) { goToScene(s.id); setShowStoryline(false) }
+                      }}
+                    >
+                      <span className="vn-storyline-num">{i + 1}</span>
+                      <span className="vn-storyline-name">{s.title || `场景 ${i + 1}`}</span>
+                      {current && <span className="vn-storyline-badge">当前</span>}
+                      {visited && !current && <span className="vn-storyline-check">✓</span>}
+                      {!visited && !current && <span className="vn-storyline-lock">🔒</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 对话框 — 场景标题期间隐藏 */}
+      {!hideUI && currentDialogue && !showSceneTitle && (
         <div className={`vn-dialogue-box${isNarrator ? ' vn-narrator' : ''}`}>
           {isNarrator
             ? <div className="vn-narrator-label">旁 白</div>
