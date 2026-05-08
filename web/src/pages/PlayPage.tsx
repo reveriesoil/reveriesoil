@@ -77,6 +77,8 @@ export default function PlayPage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [showSceneTitle, setShowSceneTitle] = useState(false)
   const [currentSceneTitle, setCurrentSceneTitle] = useState('')
+  // 场景标题待播（CG 关闭后触发）
+  const [pendingSceneTitle, setPendingSceneTitle] = useState('')
 
   const [showCgOverlay, setShowCgOverlay] = useState(false)
   const [cgOverlayUrl, setCgOverlayUrl] = useState('')
@@ -248,9 +250,13 @@ export default function PlayPage() {
       setSceneId(seq.id)
       setDialogueIdx(0)
       if (seq.title) {
-        setCurrentSceneTitle(seq.title)
-        setShowSceneTitle(true)
-        setTimeout(() => setShowSceneTitle(false), 2200)
+        if (seq.cg_url) {
+          setPendingSceneTitle(seq.title)
+        } else {
+          setCurrentSceneTitle(seq.title)
+          setShowSceneTitle(true)
+          setTimeout(() => setShowSceneTitle(false), 2200)
+        }
       }
     } else {
       setGameOver(true)
@@ -281,9 +287,13 @@ export default function PlayPage() {
     setSceneId(nextId)
     setDialogueIdx(0)
     if (next.title) {
-      setCurrentSceneTitle(next.title)
-      setShowSceneTitle(true)
-      setTimeout(() => setShowSceneTitle(false), 2200)
+      if (next.cg_url) {
+        setPendingSceneTitle(next.title)
+      } else {
+        setCurrentSceneTitle(next.title)
+        setShowSceneTitle(true)
+        setTimeout(() => setShowSceneTitle(false), 2200)
+      }
     }
   }
 
@@ -388,9 +398,13 @@ export default function PlayPage() {
               setChoicesMade([])
               setGameOver(false)
               if (scenes[0].title) {
-                setCurrentSceneTitle(scenes[0].title)
-                setShowSceneTitle(true)
-                setTimeout(() => setShowSceneTitle(false), 2200)
+                if (scenes[0].cg_url) {
+                  setPendingSceneTitle(scenes[0].title)
+                } else {
+                  setCurrentSceneTitle(scenes[0].title)
+                  setShowSceneTitle(true)
+                  setTimeout(() => setShowSceneTitle(false), 2200)
+                }
               }
             }}>🔄 重新游玩</button>
             {!shareUrl && (
@@ -431,7 +445,16 @@ export default function PlayPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            onClick={e => { e.stopPropagation(); setShowCgOverlay(false) }}
+            onClick={e => {
+              e.stopPropagation()
+              setShowCgOverlay(false)
+              if (pendingSceneTitle) {
+                setCurrentSceneTitle(pendingSceneTitle)
+                setPendingSceneTitle('')
+                setShowSceneTitle(true)
+                setTimeout(() => setShowSceneTitle(false), 2200)
+              }
+            }}
           >
             {cgOverlayVideoUrl ? (
               <video
