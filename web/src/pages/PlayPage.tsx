@@ -650,10 +650,6 @@ export default function PlayPage() {
             currentSceneId={sceneId}
             visitedScenes={visitedScenes}
             choicesMade={choicesMade as Array<{ scene: string; choice: number; text: string }>}
-            onJumpToScene={(targetId) => {
-              setSceneId(targetId)
-              setDialogueIdx(0)
-            }}
             onClose={() => setShowTimeline(false)}
           />
         )}

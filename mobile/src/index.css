@@ -880,31 +880,26 @@ html, body {
   padding: 8px 10px; border-radius: 8px;
   background: transparent; border: 1px solid transparent;
   color: var(--muted); font-size: 12px; font-family: inherit;
-  cursor: pointer; text-align: left; width: 100%;
+  cursor: default; text-align: left; width: 100%;
   transition: all 0.12s;
-}
-.vn-storyline-item:hover:not(:disabled) {
-  background: rgba(201,169,110,0.08);
-  border-color: rgba(201,169,110,0.2);
-  color: var(--text);
 }
 .vn-storyline-item--current {
   background: rgba(201,169,110,0.12);
   border-color: rgba(201,169,110,0.35);
   color: var(--accent2);
 }
-.vn-storyline-item--locked { opacity: 0.38; cursor: not-allowed; }
+.vn-storyline-item--locked { opacity: 0.38; cursor: default; }
 .vn-storyline-num {
   font-size: 10px; color: var(--muted); min-width: 20px;
   font-variant-numeric: tabular-nums;
 }
 .vn-storyline-name { flex: 1; line-height: 1.4; }
+.vn-storyline-name--hidden { color: var(--muted); font-style: italic; letter-spacing: 0.05em; }
 .vn-storyline-badge {
   font-size: 9px; padding: 1px 5px; border-radius: 5px;
   background: rgba(201,169,110,0.2); color: var(--accent); flex-shrink: 0;
 }
 .vn-storyline-check { font-size: 11px; color: var(--success); flex-shrink: 0; }
-.vn-storyline-lock { font-size: 11px; flex-shrink: 0; opacity: 0.6; }
 
 /* ═══════════════════════════════════════════════════════════════
    调试日志面板 — Debug Panel

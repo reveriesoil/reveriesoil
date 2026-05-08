@@ -13,7 +13,6 @@ interface StoryTimelineProps {
   currentSceneId: string
   visitedScenes: Set<string>
   choicesMade: ChoiceRecord[]
-  onJumpToScene: (sceneId: string) => void
   onClose: () => void
 }
 
@@ -22,7 +21,6 @@ export default function StoryTimeline({
   currentSceneId,
   visitedScenes,
   choicesMade,
-  onJumpToScene,
   onClose,
 }: StoryTimelineProps) {
   const scenes = game.script_json?.scenes ?? []
@@ -82,43 +80,37 @@ export default function StoryTimeline({
           {scenes.map((scene, idx) => {
             const isVisited = visitedScenes.has(scene.id)
             const isCurrent = scene.id === currentSceneId
+            const isRevealed = isVisited || isCurrent
             const choiceRecord = getChoiceForScene(scene.id)
             const hasChoices = (scene.choices?.length ?? 0) > 0
-            const clickable = isVisited || isCurrent
 
             return (
               <div key={scene.id} className="stl-scene-wrapper">
                 {/* 连接线 */}
                 {idx > 0 && (
-                  <div className={`stl-connector${(isVisited || isCurrent) ? ' stl-connector--visited' : ''}`} />
+                  <div className={`stl-connector${isRevealed ? ' stl-connector--visited' : ''}`} />
                 )}
 
-                {/* 场景卡片 */}
+                {/* 场景卡片（仅展示，不可点击跳转） */}
                 <div
                   ref={isCurrent ? currentRef : undefined}
                   className={[
                     'stl-scene-node',
                     isCurrent ? 'stl-scene-node--current' : '',
                     isVisited && !isCurrent ? 'stl-scene-node--visited' : '',
-                    !isVisited && !isCurrent ? 'stl-scene-node--future' : '',
+                    !isRevealed ? 'stl-scene-node--future' : '',
                   ].join(' ')}
-                  onClick={() => {
-                    if (clickable) {
-                      onJumpToScene(scene.id)
-                      onClose()
-                    }
-                  }}
-                  title={clickable ? `跳转到：${scene.title ?? '场景 ' + (idx + 1)}` : '尚未探索'}
+                  title={isRevealed ? (scene.title ?? `场景 ${idx + 1}`) : '未探索的故事'}
                 >
                   {/* 缩略图 */}
-                  {scene.background_url && (isVisited || isCurrent) ? (
+                  {scene.background_url && isRevealed ? (
                     <div
                       className="stl-scene-thumb"
                       style={{ backgroundImage: `url(${scene.background_url})` }}
                     />
                   ) : (
                     <div className="stl-scene-thumb stl-scene-thumb--empty">
-                      {idx + 1}
+                      {isRevealed ? idx + 1 : '?'}
                     </div>
                   )}
 
@@ -126,12 +118,12 @@ export default function StoryTimeline({
                   <div className="stl-scene-info">
                     <div className="stl-scene-num">第 {idx + 1} 场</div>
                     <div className="stl-scene-title-row">
-                      <span className="stl-scene-name">
-                        {scene.title ?? `场景 ${idx + 1}`}
+                      <span className={`stl-scene-name${!isRevealed ? ' stl-scene-name--hidden' : ''}`}>
+                        {isRevealed ? (scene.title ?? `场景 ${idx + 1}`) : '???'}
                       </span>
                       {isCurrent && <span className="stl-current-badge">当前</span>}
                     </div>
-                    {hasChoices && (isVisited || isCurrent) && (
+                    {hasChoices && isRevealed && (
                       <div className="stl-scene-meta">
                         {scene.choices!.length} 个选项
                       </div>
@@ -156,14 +148,15 @@ export default function StoryTimeline({
                   </div>
                 </div>
 
-                {/* 选择分支（仅已访问且有选项的场景显示） */}
-                {hasChoices && (isVisited || isCurrent) && (
+                {/* 选择分支（已访问且有选项时显示；未访问不展示） */}
+                {hasChoices && isRevealed && (
                   <div className="stl-choices-block">
                     {scene.choices!.map((choice, ci) => {
                       const chosen = choiceRecord?.choice === ci
                       const targetId = choice.next_scene_id ?? choice.next_scene
                       const targetScene = targetId ? scenes.find(s => s.id === targetId) : undefined
                       const targetIdx = targetScene ? scenes.indexOf(targetScene) : -1
+                      const hasChosen = !!choiceRecord
 
                       return (
                         <div
@@ -171,8 +164,10 @@ export default function StoryTimeline({
                           className={`stl-choice-item${chosen ? ' stl-choice-item--chosen' : ' stl-choice-item--other'}`}
                         >
                           <span className="stl-choice-bullet">{chosen ? '●' : '○'}</span>
-                          <span className="stl-choice-text">{choice.text}</span>
-                          {targetScene && targetIdx >= 0 && (
+                          <span className="stl-choice-text">
+                            {hasChosen ? choice.text : (chosen ? choice.text : '???')}
+                          </span>
+                          {chosen && targetScene && targetIdx >= 0 && (
                             <span className="stl-choice-dest">→ 第 {targetIdx + 1} 场</span>
                           )}
                         </div>

@@ -657,21 +657,17 @@ export default function PlayPage() {
                   const visited = visitedScenes.has(s.id)
                   const current = s.id === sceneId
                   return (
-                    <button
+                    <div
                       key={s.id}
                       className={`vn-storyline-item${current ? ' vn-storyline-item--current' : ''}${!visited && !current ? ' vn-storyline-item--locked' : ''}`}
-                      disabled={!visited && !current}
-                      onClick={() => {
-                        if (current) { setShowStoryline(false); return }
-                        if (visited) { goToScene(s.id); setShowStoryline(false) }
-                      }}
                     >
                       <span className="vn-storyline-num">{i + 1}</span>
-                      <span className="vn-storyline-name">{s.title || `场景 ${i + 1}`}</span>
+                      <span className={`vn-storyline-name${!visited && !current ? ' vn-storyline-name--hidden' : ''}`}>
+                        {visited || current ? (s.title || `场景 ${i + 1}`) : '???'}
+                      </span>
                       {current && <span className="vn-storyline-badge">当前</span>}
                       {visited && !current && <span className="vn-storyline-check">✓</span>}
-                      {!visited && !current && <span className="vn-storyline-lock">🔒</span>}
-                    </button>
+                    </div>
                   )
                 })}
               </div>

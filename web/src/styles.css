@@ -4272,17 +4272,16 @@ select.sm-input optgroup {
 }
 
 .stl-scene-node--visited {
-  cursor: pointer;
+  cursor: default;
   border-color: rgba(139,92,246,0.25);
 }
 .stl-scene-node--visited:hover {
-  background: rgba(139,92,246,0.1);
-  border-color: rgba(139,92,246,0.5);
-  transform: translateX(2px);
+  background: rgba(139,92,246,0.08);
+  border-color: rgba(139,92,246,0.35);
 }
 
 .stl-scene-node--current {
-  cursor: pointer;
+  cursor: default;
   border-color: rgba(167,139,250,0.6);
   background: rgba(139,92,246,0.15);
   box-shadow: 0 0 0 2px rgba(139,92,246,0.2);
@@ -4342,6 +4341,11 @@ select.sm-input optgroup {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 160px;
+}
+.stl-scene-name--hidden {
+  color: var(--muted);
+  font-style: italic;
+  letter-spacing: 0.05em;
 }
 .stl-current-badge {
   font-size: 10px;
