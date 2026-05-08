@@ -169,9 +169,13 @@ export default function PlayPage() {
         if (!restored) {
           setSceneId(scenes[0].id)
           if (scenes[0].title) {
-            setCurrentSceneTitle(scenes[0].title)
-            setShowSceneTitle(true)
-            setTimeout(() => setShowSceneTitle(false), 2200)
+            if (scenes[0].cg_url) {
+              setPendingSceneTitle(scenes[0].title)
+            } else {
+              setCurrentSceneTitle(scenes[0].title)
+              setShowSceneTitle(true)
+              setTimeout(() => setShowSceneTitle(false), 2200)
+            }
           }
         }
       })
