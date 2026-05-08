@@ -13,6 +13,7 @@ text_gen.py — AI 文本生成服务（多角色分工流水线）
 
 import json
 import logging
+import random
 from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
@@ -36,9 +37,18 @@ _token_counter: ContextVar[Optional[Dict[str, int]]] = ContextVar('_token_counte
 # 内部辅助
 # ---------------------------------------------------------------------------
 
-def _client(api_key: str, endpoint: Optional[str]) -> AsyncOpenAI:
+def _client(api_key: str, endpoint: Optional[str], timeout: float = 180.0) -> AsyncOpenAI:
     # 单次 LLM 调用最多 3 分钟；最多重试 1 次（默认 2 次累计可达 9 分钟，过长）
-    return AsyncOpenAI(api_key=api_key, base_url=endpoint, timeout=180.0, max_retries=1)
+    return AsyncOpenAI(api_key=api_key, base_url=endpoint, timeout=timeout, max_retries=1)
+
+
+def _client_for_model(api_key: str, endpoint: Optional[str], model: str) -> AsyncOpenAI:
+    """根据模型特性选择合适的超时时长。
+    Kimi K2 系列为大型 MoE 模型，单次推理可能耗时 3-5 分钟，需要更长的超时时间。
+    """
+    if _is_kimi_k2(model):
+        return _client(api_key, endpoint, timeout=360.0)  # Kimi K2 允许 6 分钟
+    return _client(api_key, endpoint)
 
 
 # Kimi K2 系列：思考模式下 tool_choice 只能 auto/none、temperature 必须 1.0；
@@ -106,6 +116,17 @@ def _outline_scene_count(d: Dict[str, Any]) -> int:
     return len(_outline_scene_list(d))
 
 
+_NOVEL_MODE_DURATION = -1  # duration_minutes 为此值时进入完整小说模式（AI自主决定场景数）
+
+
+def _is_novel_mode(story_spec: Dict[str, Any]) -> bool:
+    """是否为完整小说模式（不限时长，AI自主创作直到故事完结）。"""
+    try:
+        return int(story_spec.get("duration_minutes", 30) or 30) == _NOVEL_MODE_DURATION
+    except (TypeError, ValueError):
+        return False
+
+
 def _target_scene_count(story_spec: Dict[str, Any]) -> int:
     manual_count = story_spec.get("scene_count")
     if manual_count:
@@ -117,7 +138,10 @@ def _target_scene_count(story_spec: Dict[str, Any]) -> int:
         duration = int(story_spec.get("duration_minutes", 30) or 30)
     except (TypeError, ValueError):
         duration = 30
-    return max(12, duration // 3)
+    if duration == _NOVEL_MODE_DURATION:
+        return 0  # 小说模式：由 AI 自行决定，0 表示无约束
+    # 场景数与时长成比例：15分钟→8，30分钟→15，60分钟→30，120分钟→40（上限）
+    return min(40, max(8, duration // 2))
 
 
 def _has_required_scene_count(outline: Dict[str, Any], target_count: int) -> bool:
@@ -381,7 +405,8 @@ async def generate_outline(
         ),
     }
     _depth_hint = _depth_style.get(depth, _depth_style[2])
-    scene_count = _target_scene_count(story_spec)
+    novel_mode = _is_novel_mode(story_spec)
+    scene_count = _target_scene_count(story_spec)  # 0 表示小说模式（AI自决）
     interaction_level = int(story_spec.get("interaction_level", 3) or 3)
     interaction_level = max(1, min(5, interaction_level))
     # 由交互程度推导分支密度；level=1 退化为线性叙事，更高级别要求更多分支节点
@@ -395,40 +420,87 @@ async def generate_outline(
     branch_enabled = story_spec.get("branch_enabled", True) and interaction_level >= 2
     _branch_hint = _interaction_hint.get(interaction_level, _interaction_hint[3])
 
-    system = f"""你是一位顶级视觉小说总编剧，负责创作故事大纲和人物档案。
+    if novel_mode:
+        # ── 完整小说模式：不限制场景数，AI 按故事完整性自主决定 ─────────────
+        system = f"""你是一位顶级视觉小说总编剧，负责创作完整的长篇故事大纲和人物档案。
 
 {_depth_hint}
 
+【重要约束】故事的世界观、时代背景、人物设定与剧情走向仅由叙事深度和故事风格类型决定，与美术画风完全无关。请勿因画风而改变故事的时代背景、世界设定或剧情内容。
+
+【标题与选题独创性】title 字段必须直接从用户提示词中提炼核心意象或冲突，不得使用任何曾出现在动漫/轻小说/视觉小说作品中的常见标题（例如"镜中人""错位时光""命运之约"等流派套话）；故事设定、人物关系须与用户提示词高度相关，不得套用该流派的典型模板情节。
+
+【完整小说模式】本次创作没有场景数量上限，你需要创作一部情节完整、叙事丰富的长篇故事。场景数量由故事本身的需要决定——通常在 60-120 个场景之间，直到故事有自然、圆满、令人满意的结局为止。不要因为场景多而压缩情节，要让每个场景都有独立的戏剧价值。
+
 任务：
-- 创作 3-5 名人物，每人有鲜明性格、背景故事、成长弧线、独特说话方式和口头禅
+- 创作 3-6 名人物，每人有鲜明性格、背景故事、完整成长弧线、独特说话方式和口头禅，以及能体现其内心世界的标志性行为习惯
+- 规划足够多的场景以讲述完整故事，每个场景的 summary 控制在 150 字以内，按照"引入→世界建立→人物关系发展→初次冲突→深化矛盾→情感积累→高潮→余波→结局"宏观结构编排，中间可有多个起伏波折
+- 每个场景只需写情节摘要，不需要写对话，但**必须**写明：①场景情绪基调，②出场人物的当前心理状态，③该场景发生的核心事件及其对人物关系的影响，④为后续场景留下的伏笔或悬念
+- **每个场景的 characters_present 必填**，列出该场景出场的所有角色 ID，最多 2-3 人；旁白场景至少包含主视角角色 ID。该字段决定立绘渲染，禁止留空数组。
+- {_branch_hint}
+- 在高潮或重要情感时刻安排 CG（has_cg=true），长篇故事可安排 4-8 个 CG
+- 故事须有完整起承转合，情感层次丰富，不同场景情绪要有明显起伏
+- 每个场景都要推动主线剧情发展，不能重复相似情节
+- 最后一个场景必须是故事的真正结局，让读者感到故事已完整落幕
+- 所有 ID 用英文下划线格式（如 scene_001, char_alice）"""
+        outline_max_tokens = 16384
+    else:
+        system = f"""你是一位顶级视觉小说总编剧，负责创作故事大纲和人物档案。
+
+{_depth_hint}
+
+【重要约束】故事的世界观、时代背景、人物设定与剧情走向仅由叙事深度和故事风格类型决定，与美术画风完全无关。请勿因画风而改变故事的时代背景、世界设定或剧情内容。
+
+【标题与选题独创性】title 字段必须直接从用户提示词中提炼核心意象或冲突，不得使用任何曾出现在动漫/轻小说/视觉小说作品中的常见标题（例如"镜中人""错位时光""命运之约"等流派套话）；故事设定、人物关系须与用户提示词高度相关，不得套用该流派的典型模板情节。
+
+任务：
+- 创作 3-5 名人物，每人有鲜明性格、背景故事、成长弧线、独特说话方式和口头禅，以及能体现其内心世界的标志性行为习惯
 - 规划恰好 {scene_count} 个场景，每个场景的 summary 控制在 150 字以内（避免截断），按照"引入→建立关系→冲突积累→情感爆发→高潮→余波→结局"结构编排
-- 每个场景只需写情节摘要，不需要写对话，但要写明场景情绪、人物内心状态、发生的关键事件
+- 每个场景只需写情节摘要，不需要写对话，但**必须**写明：①场景情绪基调，②出场人物的当前心理状态，③该场景发生的核心事件及其对人物关系的影响，④为后续场景留下的伏笔或悬念
 - **每个场景的 characters_present 必填**，列出该场景出场的所有角色 ID（来自 characters 数组的 id 字段，例如 ["char_alice", "char_bob"]），最多 2-3 人；旁白场景至少包含主视角角色 ID。该字段决定立绘渲染，禁止留空数组。
 - {_branch_hint}
 - 在高潮或重要情感时刻安排 CG（has_cg=true），整个故事 2-4 个 CG 为宜
 - 故事须有完整起承转合，情感层次丰富，不同场景情绪要有明显起伏
 - 每个场景都要推动主线剧情发展，不能重复相似情节
 - 所有 ID 用英文下划线格式（如 scene_001, char_alice）"""
+        outline_max_tokens = 8192
 
-    client = _client(api_key, endpoint)
+    client = _client_for_model(api_key, endpoint, model)
     title_hint = story_spec.get("title", "")
     story_style_hint = (story_spec.get("story_style") or "").strip()
     art_style_hint = (story_spec.get("art_style") or "").strip()
+    # 随机选取创意方向提示，防止模型对相同风格组合固化输出（如持续生成同质化标题）
+    _creativity_hints = [
+        "请充分发挥创意，从用户提示词出发构建完全原创、独一无二的世界观与人物关系。",
+        "故事的标题、核心冲突与人物设定必须紧扣用户提示词，展现这个特定故事才有的独特视角。",
+        "请从用户提示词的具体细节中提炼故事灵感，打造与众不同的叙事切入点。",
+        "在满足风格要求的同时，请以全新视角演绎这个故事，避免任何流派常见的套路情节。",
+        "本次创作的核心挑战是让故事标题和设定令人耳目一新，完全区别于同类型已有作品。",
+    ]
+    _creativity_note = random.choice(_creativity_hints)
     user_content = (
         f"请根据以下提示词创作故事大纲：\n{prompt}"
         + (f"\n\n【用户指定的故事标题】：{title_hint}（请使用此标题，不要自行另取）" if title_hint else "")
         + (f"\n\n【故事风格类型】：{story_style_hint}（整体叙事、氛围与题材须紧扣此风格）" if story_style_hint else "")
         + (f"\n\n【未来绘画风格】：{art_style_hint}（在人物、场景描述中预留与该美术风格一致的视觉要素，后续导演阶段会据此决定全局美术风格）" if art_style_hint else "")
         + (f"\n\n【用户指定的人物设定】：\n{character_prompt}\n请严格按照以上角色创作人物档案（名字、性格、背景等），可补充细节但不可替换或删除已指定的角色。" if character_prompt and character_prompt.strip() else "")
+        + f"\n\n{_creativity_note}"
     )
     result = await _call_tool(
         client, model, system,
         user_content,
-        OUTLINE_SCHEMA, temperature=0.9, max_tokens=8192,
+        OUTLINE_SCHEMA, temperature=0.9, max_tokens=outline_max_tokens,
     )
 
     # 验校：若 scene_outlines 缺失或数量不足，用 json_object 模式强制重试。
     actual_scene_count = _outline_scene_count(result)
+
+    if novel_mode:
+        # 小说模式：接受 AI 返回的任意场景数（安全上限 200），不强制重试
+        actual_scene_count = min(actual_scene_count, 200)
+        logger.info(f"小说模式大纲：AI 规划了 {actual_scene_count} 个场景")
+        return result
+
     if actual_scene_count < scene_count:
         logger.warning(
             f"大纲场景数不足：{actual_scene_count}/{scene_count} "
@@ -487,7 +559,7 @@ async def validate_and_refine(
 
     try:
         result = await _call_json(
-            _client(api_key, endpoint), model, system, user,
+            _client_for_model(api_key, endpoint, model), model, system, user,
             temperature=0.3, max_tokens=8192,
         )
         if "outline" in result:
@@ -696,7 +768,7 @@ async def generate_director_vision(
     user = f"请根据以下剧本大纲进行艺术设计：\n{json.dumps(outline, ensure_ascii=False)}"
 
     result = await _call_tool(
-        _client(api_key, endpoint), model, system, user,
+        _client_for_model(api_key, endpoint, model), model, system, user,
         DIRECTOR_VISION_SCHEMA, temperature=0.75, max_tokens=8192,
     )
     return _normalize_director_vision(result, outline)
@@ -749,10 +821,11 @@ SCENE_PROMPTS_SCHEMA = {
                     "type": "object",
                     "properties": {
                         "scene_id": {"type": "string"},
+                        "bg_key": {"type": "string"},
                         "prompt": {"type": "string"},
                         "negative_prompt": {"type": "string"},
                     },
-                    "required": ["scene_id", "prompt", "negative_prompt"],
+                    "required": ["scene_id", "bg_key", "prompt", "negative_prompt"],
                 },
             },
             "cg_prompts": {
@@ -807,8 +880,9 @@ async def generate_image_prompts(
 - 人物 negative_prompt：bad anatomy, extra fingers, missing limbs, deformed body, multiple characters, duplicate, text, watermark, lowres, blurry, jpeg artifacts, bad proportions, out of frame
 
 - 背景 prompt：必须 **16:9 widescreen cinematic landscape composition**，强调环境细节、光线、氛围、色调、远景中景前景层次；**绝对不能出现任何人物、人影、剪影**（在 prompt 末尾追加 "no people, no humans, no figures, no silhouettes"），并将这些词复制到 negative_prompt
-- CG prompt：vertical 9:16 portrait, 包含所有相关人物、互动动作、情绪、场景、电影构图；与背景不同，CG 允许并鼓励出现人物
-- negative_prompt：覆盖 lowres、blurry、bad anatomy、watermark、text、jpeg artifacts；背景额外加 person/people/humans
+- **bg_key 规则**：为每个场景分配一个简短的 bg_key（格式：英文地点_时段，如 office_night、bedroom_dawn、rooftop_evening），视觉效果完全相同的场景必须使用相同 bg_key；不同场景使用不同 bg_key；bg_key 相同意味着背景可复用
+- CG prompt：vertical 9:16 portrait, 包含所有相关人物、互动动作、情绪、场景、电影构图；与背景不同，CG 允许并鼓励出现人物；**CG 严禁使用绿幕/纯色背景**，必须有真实丰富的场景环境（室内/户外/自然/建筑等），背景需有光线、氛围、深度细节
+- negative_prompt：覆盖 lowres、blurry、bad anatomy、watermark、text、jpeg artifacts；背景额外加 person/people/humans；CG 额外加 green screen, chroma key, solid color background, plain background
 - 所有 prompt 使用英文
 - is_animatable=true 的 CG 应适合动态化（如飘落的樱花、闪烁的光效）"""
 
@@ -825,7 +899,7 @@ async def generate_image_prompts(
     )
 
     # 两次独立调用，避免单次输出超出模型 8192 token 上限
-    client = _client(api_key, endpoint)
+    client = _client_for_model(api_key, endpoint, model)
     char_result = await _call_tool(
         client, model, system, user_chars,
         CHARACTER_PROMPTS_SCHEMA, temperature=0.5, max_tokens=8192,
@@ -890,7 +964,7 @@ async def generate_voice_direction(
 
     try:
         raw = await _call_json(
-            _client(api_key, endpoint), model, system, user,
+            _client_for_model(api_key, endpoint, model), model, system, user,
             temperature=0.6, max_tokens=1500,
         )
         # 规范化：确保返回 {char_id: str} 格式
@@ -1133,7 +1207,7 @@ async def generate_storyboard(
         "  · 若本场景没有可用 CG 列表，cg_trigger 留空字符串"
     )
 
-    client = _client(api_key, endpoint)
+    client = _client_for_model(api_key, endpoint, model)
     all_scenes: List[Dict[str, Any]] = []
     failed_scene_ids: List[str] = []
     total = len(scene_outlines)
@@ -1321,7 +1395,7 @@ async def generate_stream_segment(
     )
 
     return await _call_tool(
-        _client(api_key, endpoint), model, system, user,
+        _client_for_model(api_key, endpoint, model), model, system, user,
         STREAM_SEGMENT_SCHEMA, temperature=0.9, max_tokens=4000,
     )
 

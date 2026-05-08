@@ -106,9 +106,32 @@ function ModelSection({
         <div className="sm-field">
           <label className="sm-label"><IconKey /><span>API Key</span></label>
           <div className="sm-input-wrap">
-            <input className="sm-input sm-input--key" type={showKey ? 'text' : 'password'} value={value.api_key}
-              onChange={e => onChange({ ...value, api_key: e.target.value })} placeholder="sk-..." autoComplete="off" />
-            <button type="button" className="sm-eye-btn" onClick={() => setShowKey(s => !s)} tabIndex={-1} aria-label={showKey ? '隐藏' : '显示'}>
+            {/* 用条件渲染两个独立 input 代替切换 type，避免 Android WebView
+                在 type 从 password→text 变化时触发空值 onChange 清空数据 */}
+            {showKey ? (
+              <input
+                key="apikey-text"
+                className="sm-input sm-input--key"
+                type="text"
+                value={value.api_key}
+                onChange={e => onChange({ ...value, api_key: e.target.value })}
+                placeholder="sk-..."
+                autoComplete="off"
+                spellCheck={false}
+              />
+            ) : (
+              <input
+                key="apikey-pass"
+                className="sm-input sm-input--key"
+                type="password"
+                value={value.api_key}
+                onChange={e => onChange({ ...value, api_key: e.target.value })}
+                placeholder="sk-..."
+                autoComplete="new-password"
+                spellCheck={false}
+              />
+            )}
+            <button type="button" className="sm-eye-btn" onClick={e => { e.preventDefault(); e.stopPropagation(); setShowKey(s => !s) }} tabIndex={-1} aria-label={showKey ? '隐藏' : '显示'}>
               {showKey
                 ? <svg viewBox="0 0 18 14" width="16" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 7C3 3 6 1 9 1s6 2 8 6c-2 4-5 6-8 6s-6-2-8-6z" /><circle cx="9" cy="7" r="2.5" /><line x1="2" y1="2" x2="16" y2="12" /></svg>
                 : <svg viewBox="0 0 18 14" width="16" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 7C3 3 6 1 9 1s6 2 8 6c-2 4-5 6-8 6s-6-2-8-6z" /><circle cx="9" cy="7" r="2.5" /></svg>

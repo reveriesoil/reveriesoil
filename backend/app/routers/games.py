@@ -255,13 +255,17 @@ async def export_game(game_id: str, db: AsyncSession = Depends(get_db)):
 
     buf.seek(0)
     title_raw = (game.script_json or {}).get("title", "") if isinstance(game.script_json, dict) else ""
-    safe_title = re.sub(r"[^\w\-\. ]", "", title_raw or "story").strip()[:40] or "story"
-    filename = f"ReverieSoil_{safe_title}.rsz"
+    safe_title = (title_raw or "story").strip()[:40] or "story"
+    from urllib.parse import quote
+    ascii_title = re.sub(r"[^\x20-\x7E]", "_", safe_title)
+    ascii_clean = re.sub(r"[^\w\-\. ]", "_", ascii_title)
+    ascii_filename = f"ReverieSoil_{ascii_clean}.rsz"
+    encoded_filename = f"ReverieSoil_{quote(safe_title, safe='')}.rsz"
 
     return StreamingResponse(
         buf,
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        headers={"Content-Disposition": f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"},
     )
 
 

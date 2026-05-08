@@ -209,6 +209,12 @@ function modelExtraBody(_model: string): Record<string, unknown> {
   return { thinking: { type: 'disabled' } }
 }
 
+/** 根据模型特性返回合适的 AbortSignal（Kimi K2 MoE 推理最长 6 分钟） */
+function timeoutSignal(model: string): AbortSignal {
+  const ms = isKimiK2(model) ? 360_000 : 180_000
+  return AbortSignal.timeout(ms)
+}
+
 function targetSceneCount(storySpec: Record<string, unknown>): number {
   const manual = storySpec['scene_count']
   if (manual) {
@@ -273,6 +279,7 @@ async function callTool(
       Authorization: `Bearer ${cfg.api_key}`,
     },
     body: JSON.stringify(body),
+    signal: timeoutSignal(cfg.model),
   })
   if (!res.ok) {
     const err = await res.text()
@@ -317,6 +324,7 @@ async function callJson(
       Authorization: `Bearer ${cfg.api_key}`,
     },
     body: JSON.stringify(body),
+    signal: timeoutSignal(cfg.model),
   })
   if (!res.ok) {
     const err = await res.text()

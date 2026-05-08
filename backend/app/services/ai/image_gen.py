@@ -124,9 +124,11 @@ async def generate_cg(
     """生成人物互动 CG（宽幅横版 16:9），返回图像字节。"""
     prompt = (
         f"Visual novel CG illustration, {cg_prompt}, "
-        f"cinematic wide composition, two or more characters interacting, "
-        f"emotionally evocative, detailed background, "
-        f"high quality anime illustration, 16:9 landscape format"
+        f"cinematic composition, characters interacting emotionally, "
+        f"rich detailed background environment (indoor/outdoor/nature/architecture), "
+        f"dramatic lighting with depth and atmosphere, "
+        f"high quality anime illustration, "
+        f"no green screen, no chroma key background, no solid color background, no plain background"
     )
     return await _dispatch(prompt, "cg", api_key, model, endpoint, quality="hd")
 

@@ -12,10 +12,6 @@
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
         <include domain="file" path="." />
-        <exclude domain="root" path="app_webview/Default/Cache" />
-        <exclude domain="root" path="app_webview/Default/Code Cache" />
-        <exclude domain="root" path="app_webview/Default/GPUCache" />
-        <exclude domain="cache" path="." />
     </cloud-backup>
     <device-transfer>
         <include domain="root" path="app_webview/Default/IndexedDB" />
@@ -24,9 +20,5 @@
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
         <include domain="file" path="." />
-        <exclude domain="root" path="app_webview/Default/Cache" />
-        <exclude domain="root" path="app_webview/Default/Code Cache" />
-        <exclude domain="root" path="app_webview/Default/GPUCache" />
-        <exclude domain="cache" path="." />
     </device-transfer>
 </data-extraction-rules>

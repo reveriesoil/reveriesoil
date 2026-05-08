@@ -14,9 +14,4 @@
     <include domain="database" path="." />
     <include domain="sharedpref" path="." />
     <include domain="file" path="." />
-    <!-- 排除缓存 -->
-    <exclude domain="cache" path="." />
-    <exclude domain="root" path="app_webview/Default/Cache" />
-    <exclude domain="root" path="app_webview/Default/Code Cache" />
-    <exclude domain="root" path="app_webview/Default/GPUCache" />
 </full-backup-content>

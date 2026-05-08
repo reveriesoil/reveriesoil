@@ -74,6 +74,10 @@ if (-not (Test-Path $PngPath)) {
     Write-Fail "找不到源图标：$PngPath"
 }
 
+# 如果 ICO 已存在则跳过转换（避免 pip 网络超时阻塞构建）
+if (Test-Path $IcoPath) {
+    Write-OK "图标已存在，跳过转换：$IcoPath"
+} else {
 # 安装 Pillow（如已安装会跳过）
 # 抑制 stderr 上的 pip 警告（如 "Ignoring invalid distribution"），避免在 ErrorActionPreference=Stop 下中止脚本
 & cmd /c "python -m pip install Pillow --quiet --disable-pip-version-check 2>NUL"
@@ -95,6 +99,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-OK "图标已生成：$IcoPath"
 }
 Remove-Item $tmpPy -ErrorAction SilentlyContinue
+} # end else (ico not existed)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 步骤 2：构建前端
@@ -127,6 +132,11 @@ Write-OK "前端产物已复制到 $WebDist"
 # ══════════════════════════════════════════════════════════════════════════════
 Write-Step "步骤 3 / 5：PyInstaller 打包 Python 后端"
 
+# 如果已有打包产物则跳过，避免 pip 网络下载阻塞
+$ServerExe = Join-Path $BackendDist 'server\server.exe'
+if (Test-Path $ServerExe) {
+    Write-OK "后端打包产物已存在，跳过重新打包：$ServerExe"
+} else {
 # 安装依赖 + pyinstaller
 Push-Location $BackendDir
 try {
@@ -164,6 +174,7 @@ if (-not (Test-Path $ServerExe)) {
     Write-Fail "找不到打包产物：$ServerExe"
 }
 Write-OK "后端打包完成：$ServerExe"
+} # end else (server.exe not existed)
 
 # 清理临时文件
 $WorkPath = Join-Path $DesktopDir 'pyinstaller-work'

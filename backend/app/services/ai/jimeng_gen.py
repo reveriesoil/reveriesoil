@@ -281,8 +281,13 @@ async def _generate(access_key: str, secret_key: str, payload: dict, retries: in
         except Exception as e:
             last_err = e
             if attempt < retries:
-                wait = 3 * (attempt + 1)
-                logger.warning(f"即梦生成失败（{e}），{wait}s 后重试（{attempt+1}/{retries}）")
+                err_str = str(e).lower()
+                if "429" in err_str or "rate limit" in err_str or "too many" in err_str or "ratelimit" in err_str:
+                    wait = 60
+                    logger.warning(f"即梦 429 速率限制，等待 {wait}s 后重试（{attempt+1}/{retries}）: {e}")
+                else:
+                    wait = 3 * (attempt + 1)
+                    logger.warning(f"即梦生成失败（{e}），{wait}s 后重试（{attempt+1}/{retries}）")
                 await asyncio.sleep(wait)
             else:
                 logger.error(f"即梦生成最终失败: {e}")
@@ -659,7 +664,9 @@ async def generate_cg(
     prompt = (
         f"视觉小说CG插图，{cg_prompt}，"
         f"情感表达丰富，精细画面，高质量动漫插画，"
-        f"竖版9比16构图"
+        f"竖版9比16构图，"
+        f"真实丰富场景环境（室内户外自然建筑），光线戏剧化有深度，"
+        f"无绿幕，无纯色背景，无抠图背景"
     )
 
     payload = {

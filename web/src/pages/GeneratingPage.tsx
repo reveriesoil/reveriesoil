@@ -196,6 +196,7 @@ export default function GeneratingPage() {
   const startTimeRef = useRef<number>(initialPersisted?.startTime ?? Date.now())
   const prevStepRef = useRef<string | null>(initialPersisted?.prevStep ?? null)
   const taskIdRef = useRef<string>(taskId)
+  const elapsedOffsetRef = useRef<number>(0)  // 累计"继续生成"前的已用时长（秒）
   // 闸门：未首次加载完就禁止 save，避免 setTaskId 触发的 save 用空数据覆盖已有持久化
   const loadedRef = useRef<boolean>(!!initialPersisted || !taskIdParam)
 
@@ -336,9 +337,10 @@ export default function GeneratingPage() {
     try {
       const res = await retryGame(gameId)
       const { task_id, game_id } = res.data
-      // 在原页面重置状态并切换 task_id（无需整页刷新）
+      // 累积已用时长，保留已完成步骤，仅重置计时基线
+      elapsedOffsetRef.current += elapsed
       setTask(null)
-      setStepHistory([])
+      setStepHistory(prev => prev.filter(s => s.completedAt != null))
       prevStepRef.current = null
       startTimeRef.current = Date.now()
       setElapsed(0)
@@ -354,7 +356,7 @@ export default function GeneratingPage() {
     } finally {
       setRetrying(false)
     }
-  }, [gameId, retrying, navigate, setSearchParams])
+  }, [gameId, retrying, elapsed, navigate, setSearchParams])
 
   const handleCancel = useCallback(async () => {
     if (!taskId || cancelling) return
@@ -419,7 +421,7 @@ export default function GeneratingPage() {
           <div className="gen-timer-row">
             <div className="gen-timer-item">
               <span className="gen-timer-label">已用时</span>
-              <span className="gen-timer-value">{formatElapsed(elapsed)}</span>
+              <span className="gen-timer-value">{formatElapsed(elapsed + elapsedOffsetRef.current)}</span>
             </div>
             <div className="gen-timer-sep" />
             <div className="gen-timer-item">
@@ -451,7 +453,7 @@ export default function GeneratingPage() {
                 <button
                   className="gen-retry-btn-secondary"
                   disabled={retrying}
-                  onClick={() => navigate('/')}
+                  onClick={() => { elapsedOffsetRef.current = 0; navigate('/') }}
                 >
                   从头开始
                 </button>

@@ -225,8 +225,8 @@ export default function LandingPage() {
               <motion.div className="setup-panel"
                 initial={{ opacity: 0, y: 40, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 24, scale: 0.96 }}
-                transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: 'easeIn' }}
               >
                 <div className="setup-header">
                   <div>
@@ -243,7 +243,7 @@ export default function LandingPage() {
                     ⚠️ 尚未配置 AI 模型，请先点击右上角「设置」填写 API Key
                     <button type="button"
                       style={{ marginLeft: 10, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit' }}
-                      onClick={() => { closePanel(); setSettingsOpen(true) }}
+                      onClick={() => { closePanel(); setTimeout(() => setSettingsOpen(true), 220) }}
                     >前往配置</button>
                   </div>
                 )}

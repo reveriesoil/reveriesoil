@@ -135,6 +135,8 @@ class GenerationOrchestrator:
         self.update_progress = update_progress_fn  # async fn(step, progress, error=None, model=None)
 
     def _validate_scene_count(self, scenes: list, target_scene_count: int) -> None:
+        if target_scene_count == 0:
+            return  # 小说模式：AI 自主决定场景数，不做验证
         actual = len([s for s in scenes if isinstance(s, dict)])
         if actual < target_scene_count:
             raise ValueError(
@@ -252,13 +254,49 @@ class GenerationOrchestrator:
                 logger.warning(f"on_portraits_done 回调异常（不中断生成）: {_cb_e}")
 
         await self.update_progress("backgrounds", 50, model=_img_model)
-        background_tasks = [
-            self._generate_background(scene, global_style, image_cfg, game_id, assets_manifest)
-            for scene in scenes
-        ]
-        if background_tasks:
-            _bg_results = await asyncio.gather(*background_tasks, return_exceptions=True)
-            _raise_if_overdraft(_bg_results)
+        token_save_mode = bool(image_cfg.get("token_save_mode", False))
+        if token_save_mode:
+            # Token 节省模式：按 bg_key 去重，相同 bg_key 的场景复用同一张图
+            _bg_key_map: Dict[str, str] = {}    # scene_id → bg_key
+            _bg_canonical: Dict[str, str] = {}  # bg_key → 首个 scene_id（主场景）
+            for _bp in _dict_list(img_prompts.get("background_prompts", [])):
+                _sid = _bp.get("scene_id", "")
+                _bk = str(_bp.get("bg_key") or "").strip() or _sid
+                if _sid:
+                    _bg_key_map[_sid] = _bk
+                    if _bk not in _bg_canonical:
+                        _bg_canonical[_bk] = _sid
+            # 只为每个 bg_key 的主场景生成图片
+            unique_scenes = [s for s in scenes if _bg_canonical.get(_bg_key_map.get(s.get("id", ""), ""), "") == s.get("id", "")]
+            background_tasks = [
+                self._generate_background(scene, global_style, image_cfg, game_id, assets_manifest)
+                for scene in unique_scenes
+            ]
+            if background_tasks:
+                _bg_results = await asyncio.gather(*background_tasks, return_exceptions=True)
+                _raise_if_overdraft(_bg_results)
+            # 将主场景图片 URL 复用到同组的其余场景
+            for scene in scenes:
+                _sid = scene.get("id", "") if isinstance(scene, dict) else ""
+                if not _sid or _sid in assets_manifest["backgrounds"]:
+                    continue
+                _bk = _bg_key_map.get(_sid, _sid)
+                _canonical = _bg_canonical.get(_bk, _sid)
+                _reuse_url = assets_manifest["backgrounds"].get(_canonical, "")
+                assets_manifest["backgrounds"][_sid] = _reuse_url
+                logger.info(f"[bg/token_save] dedup {_sid} bg_key={_bk} → reuse {_canonical}")
+            logger.info(
+                f"[bg/token_save] 实际生成 {len(unique_scenes)} 张, "
+                f"复用 {len(scenes) - len(unique_scenes)} 张"
+            )
+        else:
+            background_tasks = [
+                self._generate_background(scene, global_style, image_cfg, game_id, assets_manifest)
+                for scene in scenes
+            ]
+            if background_tasks:
+                _bg_results = await asyncio.gather(*background_tasks, return_exceptions=True)
+                _raise_if_overdraft(_bg_results)
         # 背景批次完成：在校验报错前触发增量保存回调（断点续传支持）
         if on_backgrounds_done:
             try:
