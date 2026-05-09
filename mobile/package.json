@@ -1,7 +1,7 @@
 {
   "name": "reveriesoil-mobile",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.5",
   "type": "module",
   "scripts": {
     "dev":       "vite",
