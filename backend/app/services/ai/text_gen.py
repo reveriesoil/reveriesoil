@@ -243,10 +243,23 @@ async def _call_tool(
         )
     raw = choice.message.tool_calls[0].function.arguments
     try:
-        return json.loads(raw)
+        parsed = json.loads(raw)
     except json.JSONDecodeError as e:
         logger.warning(f"Tool call JSON parse error: {e}. Trying JSON repair...")
-        return _try_repair_json(raw)
+        parsed = _try_repair_json(raw)
+    if isinstance(parsed, list):
+        # AI occasionally wraps the result in a JSON array; unwrap first dict element
+        dict_items = [item for item in parsed if isinstance(item, dict)]
+        if dict_items:
+            logger.warning(
+                f"_call_tool: AI returned a list ({len(parsed)} items), "
+                f"using first dict element (model={model})"
+            )
+            return dict_items[0]
+        raise ValueError(
+            f"_call_tool: AI returned a list with no dict elements (model={model})"
+        )
+    return parsed
 
 
 async def _call_json(
