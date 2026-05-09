@@ -2586,9 +2586,9 @@ tbody tr:hover { background: var(--surface2); }
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(201,169,110,0.4);
-  background: rgba(201,169,110,0.12);
-  color: rgba(201,169,110,0.75);
+  border: 1px solid rgba(201,169,110,0.8);
+  background: rgba(30,20,5,0.72);
+  color: rgba(201,169,110,1);
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
@@ -2597,7 +2597,7 @@ tbody tr:hover { background: var(--surface2); }
   transition: background 0.15s, color 0.15s, opacity 0.2s;
 }
 .uh-card:hover .uh-export-btn { opacity: 1; pointer-events: auto; }
-.uh-export-btn:hover { background: rgba(201,169,110,0.25); color: rgba(201,169,110,1); }
+.uh-export-btn:hover { background: rgba(201,169,110,0.3); color: rgba(201,169,110,1); }
 .uh-export-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* 统计信息按钮 - 导出按钮左侧 hover 显示 */
@@ -2611,9 +2611,9 @@ tbody tr:hover { background: var(--surface2); }
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(148,163,184,0.35);
-  background: rgba(148,163,184,0.1);
-  color: rgba(148,163,184,0.7);
+  border: 1px solid rgba(148,163,184,0.75);
+  background: rgba(15,20,30,0.72);
+  color: rgba(148,163,184,1);
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
@@ -2622,7 +2622,7 @@ tbody tr:hover { background: var(--surface2); }
   transition: background 0.15s, color 0.15s, opacity 0.2s;
 }
 .uh-card:hover .uh-info-btn { opacity: 1; pointer-events: auto; }
-.uh-info-btn:hover { background: rgba(148,163,184,0.2); color: rgba(148,163,184,1); }
+.uh-info-btn:hover { background: rgba(148,163,184,0.25); color: #fff; }
 
 .uh-del-confirm-btn {
   padding: 2px 8px; font-size: 11px; border-radius: 4px;

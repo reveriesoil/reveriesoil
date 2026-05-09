@@ -77,8 +77,10 @@ async def generate_portrait(
     prompt = (
         f"CHROMA KEY GREEN SCREEN: solid flat pure green #00FF00 background ONLY. "
         f"Single uniform color background, absolutely NO scenery NO environment NO landscape NO gradient NO shadow on background. "
+        f"Character must NOT have any green, lime, or yellow-green colored elements: no green clothing, no green hair, no green skin, no green accessories. "
         f"Visual novel character sprite, {global_style} art style, {character_appearance}, "
         f"{expr_desc}, "
+        f"flat even lighting, no directional light, no shadows on character, no specular highlights, no rim light, no dramatic shading, uniform soft illumination, "
         f"full body standing pose from head to feet, character facing forward with a slight three-quarter angle, neutral idle stance, arms relaxed at sides, "
         f"consistent camera distance and framing, character occupies approximately 80 percent of the vertical canvas, head positioned in upper 12 percent of the frame, feet visible in the lower 5 percent, "
         f"identical scale and pose composition across all expressions of the same character, "
