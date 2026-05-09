@@ -318,6 +318,9 @@ async def export_game(game_id: str, db: AsyncSession = Depends(get_db)):
 
 # ── 导入 ─────────────────────────────────────────────────────────────────────
 
+_IMPORT_MAX_BYTES = 500 * 1024 * 1024  # 500 MB 上限，防止 OOM
+
+
 @router.post("/import", status_code=status.HTTP_201_CREATED, response_model=GameSummary)
 async def import_game(
     file: UploadFile = File(...),
@@ -329,7 +332,10 @@ async def import_game(
     ).lower().endswith((".rsz", ".zip")):
         raise HTTPException(status_code=400, detail="请上传 .rsz 或 .zip 格式的故事文件")
 
-    raw = await file.read()
+    raw = await file.read(_IMPORT_MAX_BYTES + 1)
+    if len(raw) > _IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="文件过大，最大支持 500 MB")
+
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as zf:
             if "game_meta.json" not in zf.namelist():
@@ -367,8 +373,8 @@ async def import_game(
             )
             db.add(game)
 
-            # 解压资源文件
-            assets_base = Path(settings.static_dir)
+            # 解压资源文件（防 Zip Slip：校验路径在 assets_base 内）
+            assets_base = Path(settings.static_dir).resolve()
             for name in zf.namelist():
                 if not name.startswith("assets/"):
                     continue
@@ -377,7 +383,10 @@ async def import_game(
                     rel = rel.replace(old_game_id, new_game_id)
                 if not rel:
                     continue
-                dest = assets_base / rel
+                dest = (assets_base / rel).resolve()
+                # 安全校验：目标路径必须在 assets_base 内
+                if not str(dest).startswith(str(assets_base)):
+                    continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(zf.read(name))
 
