@@ -217,6 +217,53 @@ async def get_history(db: AsyncSession = Depends(get_db)):
 
 # ── 导出 ─────────────────────────────────────────────────────────────────────
 
+def _compute_game_stats(script: dict, token_usage: int = 0) -> dict:
+    """从 script_json 计算故事统计数据"""
+    if not isinstance(script, dict):
+        return {
+            "total_images": 0, "portrait_count": 0, "background_count": 0,
+            "cg_count": 0, "token_usage": token_usage,
+            "total_words": 0, "scene_count": 0,
+        }
+    characters = script.get("characters") or []
+    scenes = script.get("scenes") or []
+    portrait_count = sum(len(c.get("portrait_urls") or {}) for c in characters)
+    background_count = sum(1 for s in scenes if s.get("background_url"))
+    cg_count = sum(1 for s in scenes if s.get("cg_url"))
+    total_images = portrait_count + background_count + cg_count
+    total_words = 0
+    for s in scenes:
+        for d in (s.get("dialogues") or []):
+            total_words += len(d.get("text") or "")
+        total_words += len(s.get("narration") or "")
+    return {
+        "total_images": total_images,
+        "portrait_count": portrait_count,
+        "background_count": background_count,
+        "cg_count": cg_count,
+        "token_usage": token_usage,
+        "total_words": total_words,
+        "scene_count": len(scenes),
+    }
+
+
+@router.get("/{game_id}/stats")
+async def get_game_stats(game_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Game).where(Game.id == game_id))
+    game = result.scalar_one_or_none()
+    if not game:
+        raise HTTPException(status_code=404, detail="游戏不存在")
+    task_result = await db.execute(
+        select(GenerationTask)
+        .where(GenerationTask.game_id == game.id)
+        .order_by(GenerationTask.created_at.desc())
+        .limit(1)
+    )
+    task = task_result.scalar_one_or_none()
+    token_usage = task.token_usage if task and task.token_usage else 0
+    return _compute_game_stats(game.script_json or {}, token_usage)
+
+
 @router.get("/{game_id}/export")
 async def export_game(game_id: str, db: AsyncSession = Depends(get_db)):
     """将已完成的故事打包为 .rsz 文件（ZIP 格式）供分享导入。"""

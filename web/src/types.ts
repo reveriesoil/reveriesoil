@@ -61,6 +61,16 @@ export interface GameSummary {
   created_at: string
 }
 
+export interface GameStats {
+  total_images: number
+  portrait_count: number
+  background_count: number
+  cg_count: number
+  token_usage: number
+  total_words: number
+  scene_count: number
+}
+
 export interface GameDetail extends GameSummary {
   script_json: ScriptJson
   assets_manifest?: Record<string, unknown>

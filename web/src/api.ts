@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AIConfig, AIConfigResponse, GenerateRequest, TaskStatus, GameSummary, GameDetail, GameProgress } from './types'
+import type { AIConfig, AIConfigResponse, GenerateRequest, TaskStatus, GameSummary, GameDetail, GameProgress, GameStats } from './types'
 
 const BASE = '/api'
 
@@ -23,6 +23,9 @@ export const retryGame = (gameId: string) =>
 
 export const getActiveTask = (gameId: string) =>
   http.get<{ task: TaskStatus | null }>(`/games/${gameId}/active-task`)
+
+export const getGameStats = (gameId: string) =>
+  http.get<GameStats>(`/games/${gameId}/stats`)
 
 // ── Import / Export ───────────────────────────────────────────────
 export const exportGame = (gameId: string) =>

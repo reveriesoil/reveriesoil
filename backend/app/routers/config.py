@@ -170,8 +170,7 @@ async def test_model(body: TestModelRequest):
             # 429 说明 key 有效但触发限流，视为连接成功
             return TestModelResponse(success=True, message=f"连接成功（触发限流，Key 有效）", latency_ms=latency_ms)
         if resp.status_code == 400:
-            # 400 可能是模型不支持该参数，但连接是通的
-            return TestModelResponse(success=True, message=f"连接成功（模型返回 400，请检查模型名称是否正确）", latency_ms=latency_ms)
+            return TestModelResponse(success=False, message=f"模型名称错误或参数不支持（400）：{err_msg}", latency_ms=latency_ms)
 
         return TestModelResponse(success=False, message=f"HTTP {resp.status_code}：{err_msg}", latency_ms=latency_ms)
 

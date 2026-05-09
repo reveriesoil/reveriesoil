@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getHistory, deleteGame, getActiveTask, retryGame, exportGame, importGame } from '../api'
-import type { GameSummary } from '../types'
+import { getHistory, deleteGame, getActiveTask, retryGame, exportGame, importGame, getGameStats } from '../api'
+import type { GameSummary, GameStats } from '../types'
 
 // 暖色渐变预设，为无封面的游戏卡片随机选取（与闭源版保持一致）
 const CARD_GRADIENTS = [
@@ -55,6 +55,14 @@ const IconExport = () => (
   </svg>
 )
 
+const IconInfo = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
+    <line x1="8" y1="7" x2="8" y2="11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="8" cy="4.8" r="0.8" fill="currentColor"/>
+  </svg>
+)
+
 const IconImport = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
     <path d="M8 3v8M5 8l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -72,6 +80,10 @@ export default function HistoryPage() {
   const [importing, setImporting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  // 统计弹窗
+  const [statsGameId, setStatsGameId] = useState<string | null>(null)
+  const [statsData, setStatsData] = useState<GameStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -132,6 +144,22 @@ export default function HistoryPage() {
       alert('删除失败，请稍后重试')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleInfo = async (g: GameSummary, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setStatsGameId(g.id)
+    setStatsData(null)
+    setStatsLoading(true)
+    try {
+      const res = await getGameStats(g.id)
+      setStatsData(res.data)
+    } catch {
+      showToast('获取统计信息失败', false)
+      setStatsGameId(null)
+    } finally {
+      setStatsLoading(false)
     }
   }
 
@@ -275,20 +303,29 @@ export default function HistoryPage() {
                         }
                       />
                       <div className="uh-card-overlay" />
-                      {/* 导出按钮 - 右上角 hover 显示 */}
+                      {/* 统计按钮 + 导出按钮 - 右上角 hover 显示 */}
                       {g.status === 'ready' && (
-                        <button
-                          className="uh-export-btn"
-                          title="导出故事文件"
-                          onClick={e => handleExport(g, e)}
-                          disabled={exportingId === g.id}
-                        >
-                          {exportingId === g.id ? (
-                            <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                          ) : (
-                            <IconExport />
-                          )}
-                        </button>
+                        <>
+                          <button
+                            className="uh-info-btn"
+                            title="故事统计"
+                            onClick={e => handleInfo(g, e)}
+                          >
+                            <IconInfo />
+                          </button>
+                          <button
+                            className="uh-export-btn"
+                            title="导出故事文件"
+                            onClick={e => handleExport(g, e)}
+                            disabled={exportingId === g.id}
+                          >
+                            {exportingId === g.id ? (
+                              <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                            ) : (
+                              <IconExport />
+                            )}
+                          </button>
+                        </>
                       )}
                       <div className="uh-card-body">
                         <div className="uh-card-title">{g.title || '未命名故事'}</div>
@@ -350,6 +387,71 @@ export default function HistoryPage() {
           </>
         )}
       </main>
+
+      {/* ── 故事统计弹窗 ── */}
+      <AnimatePresence>
+        {statsGameId && (
+          <>
+            <motion.div
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9000,
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setStatsGameId(null)}
+            />
+            <motion.div
+              style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                zIndex: 9001, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 16, padding: '20px 24px', width: '90%', maxWidth: 380,
+                boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+              }}
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <span style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>故事统计</span>
+                <button
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}
+                  onClick={() => setStatsGameId(null)}
+                >×</button>
+              </div>
+              {statsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+                  <div className="spinner" style={{ width: 28, height: 28, borderWidth: 2 }} />
+                </div>
+              ) : statsData ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
+                  {[
+                    { label: '总图片数量', value: statsData.total_images, unit: '张' },
+                    { label: '人物立绘数量', value: statsData.portrait_count, unit: '张' },
+                    { label: '背景图数量', value: statsData.background_count, unit: '张' },
+                    { label: 'CG 图数量', value: statsData.cg_count, unit: '张' },
+                    { label: '消耗 Token', value: statsData.token_usage.toLocaleString(), unit: '' },
+                    { label: '故事总字数', value: statsData.total_words.toLocaleString(), unit: '字' },
+                    { label: '总幕数', value: statsData.scene_count, unit: '幕' },
+                  ].map(item => (
+                    <div key={item.label} style={{
+                      background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                      padding: '10px 14px', border: '1px solid rgba(255,255,255,0.07)',
+                    }}>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+                        {item.value}<span style={{ fontSize: 12, fontWeight: 400, marginLeft: 2, color: 'rgba(255,255,255,0.5)' }}>{item.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -2599,6 +2599,30 @@ tbody tr:hover { background: var(--surface2); }
 .uh-export-btn:hover { background: rgba(201,169,110,0.25); color: rgba(201,169,110,1); }
 .uh-export-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* 统计信息按钮 - 导出按钮左侧 hover 显示 */
+.uh-info-btn {
+  position: absolute;
+  top: 8px;
+  right: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(148,163,184,0.35);
+  background: rgba(148,163,184,0.1);
+  color: rgba(148,163,184,0.7);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: background 0.15s, color 0.15s, opacity 0.2s;
+}
+.uh-card:hover .uh-info-btn { opacity: 1; pointer-events: auto; }
+.uh-info-btn:hover { background: rgba(148,163,184,0.2); color: rgba(148,163,184,1); }
+
 .uh-del-confirm-btn {
   padding: 2px 8px; font-size: 11px; border-radius: 4px;
   background: rgba(239,68,68,0.85); color: #fff; border: none; cursor: pointer;
