@@ -75,6 +75,39 @@ def _dict_list(value: Any) -> list[dict]:
     return [item for item in value if isinstance(item, dict)]
 
 
+def _collect_used_expressions(scenes: list) -> Dict[str, set]:
+    """从 scenes[].dialogues[] 中收集每个角色实际用到的表情。
+
+    返回：{character_id -> {expression, ...}}，每个集合至少包含 "normal" 兜底。
+    """
+    used: Dict[str, set] = {}
+    for scene in scenes or []:
+        if not isinstance(scene, dict):
+            continue
+        for dlg in scene.get("dialogues") or []:
+            if not isinstance(dlg, dict):
+                continue
+            cid = (dlg.get("character_id") or "").strip()
+            expr = (dlg.get("expression") or "normal").strip() or "normal"
+            if cid:
+                used.setdefault(cid, set()).add(expr)
+    return used
+
+
+def _expressions_for_char(char: dict, used_exprs: Dict[str, set]) -> list[str]:
+    """根据剧本实际用到的表情过滤 char.expressions，避免全量生成。
+
+    保证至少包含 "normal" 兜底；若 used 集合为空则回退到 ["normal"]。
+    """
+    declared = list(char.get("expressions") or ["normal"])
+    if "normal" not in declared:
+        declared.insert(0, "normal")
+    cid = (char.get("id") or "").strip()
+    used = used_exprs.get(cid, set()) | {"normal"}
+    filtered = [e for e in declared if e in used]
+    return filtered or ["normal"]
+
+
 def _resolve_text_call(text_cfg: Dict[str, Any], agent_key: str) -> tuple[str, str, Optional[str]]:
     overrides = text_cfg.get("agent_overrides") or {}
     cfg = overrides.get(agent_key) if isinstance(overrides, dict) else None
@@ -236,10 +269,12 @@ class GenerationOrchestrator:
 
         _img_model = image_cfg.get("model", "dall-e-3")
         await self.update_progress("portraits", 30, model=_img_model)
+        # 仅生成剧本中实际用到的表情（保留 normal 兜底）
+        _used_exprs = _collect_used_expressions(scenes)
         portrait_tasks = [
             self._generate_portrait(char, expr, global_style, image_cfg, game_id, assets_manifest)
             for char in characters
-            for expr in char.get("expressions", ["normal"])
+            for expr in _expressions_for_char(char, _used_exprs)
         ]
         if portrait_tasks:
             _portrait_results = await asyncio.gather(*portrait_tasks, return_exceptions=True)
@@ -392,10 +427,12 @@ class GenerationOrchestrator:
         _img_model = image_cfg.get("model", "dall-e-3")
         await self.update_progress("portraits", 30, model=_img_model)
 
+        # 仅生成剧本中实际用到的表情（保留 normal 兜底）
+        _used_exprs = _collect_used_expressions(scenes)
         portrait_tasks = [
             self._generate_portrait(char, expr, global_style, image_cfg, game_id, assets_manifest)
             for char in characters
-            for expr in char.get("expressions", ["normal"])
+            for expr in _expressions_for_char(char, _used_exprs)
             # 跳过已有 URL 的立绘
             if not assets_manifest["portraits"].get(char.get("id", ""), {}).get(expr)
         ]

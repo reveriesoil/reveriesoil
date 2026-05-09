@@ -23,9 +23,6 @@ function getGradient(id: string) {
 }
 
 function statusBadge(s: string) {
-  if (s === 'ready') return (
-    <span className="uh-card-status" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}>已完成</span>
-  )
   if (s === 'generating' || s === 'pending') return (
     <span className="uh-card-status" style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24' }}>生成中</span>
   )

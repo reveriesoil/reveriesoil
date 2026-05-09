@@ -300,12 +300,16 @@ async def _generate(access_key: str, secret_key: str, payload: dict, retries: in
 # 绿幕抠图（Chroma Key Removal）
 # ---------------------------------------------------------------------------
 
-def _remove_chroma_key(img_bytes: bytes, green_thresh: int = 35, min_green: int = 55) -> bytes:
+def _remove_chroma_key(img_bytes: bytes, green_thresh: int = 25, min_green: int = 45) -> bytes:
     """
     去除绿色背景，返回带透明通道的 PNG 字节。
-    使用全局候选掩码：凡是满足绿色阈值的像素一律视为背景（含角色内部绿色区域，
-    如绿色丝袜/绿幕痕迹等），与边缘是否相连无关。
-    若绿色像素占比过低（模型未遵循绿幕指令），自动回退到边缘颜色抠图。
+
+    优化点（v0.6.1）：
+    - 使用渐变 soft mask（基于 greenness 强度），避免硬边。
+    - mask 经过 1px 膨胀（MaxFilter）+ 高斯模糊，消除半透明绿色边缘 halo。
+    - **Despill 去溢色**：对保留像素中 g > max(r, b) 的部分，将 g 拉低到 max(r, b)，
+      消除头发/衣服边缘的绿色反光。
+    - 若绿色像素占比过低（模型未遵循绿幕指令），自动回退到边缘颜色抠图。
     """
     img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     arr = np.array(img, dtype=np.int32)
@@ -315,11 +319,9 @@ def _remove_chroma_key(img_bytes: bytes, green_thresh: int = 35, min_green: int 
     b = arr[:, :, 2]
 
     greenness = g - np.maximum(r, b)
-    # 所有满足绿色条件的像素直接视为背景（包括角色内部绿色）
-    bg_mask = (greenness >= green_thresh) & (g >= min_green)
-
-    # 检测绿幕是否有效：绿色像素占比 < 5% 则视为模型未生成绿幕背景
-    green_pixel_count = int(np.count_nonzero(bg_mask))
+    # 核心检测：用于判断绿幕是否有效
+    core_bg = (greenness >= 35) & (g >= 55)
+    green_pixel_count = int(np.count_nonzero(core_bg))
     total_pixels = arr.shape[0] * arr.shape[1]
     if green_pixel_count < total_pixels * 0.05:
         logger.warning(
@@ -328,16 +330,28 @@ def _remove_chroma_key(img_bytes: bytes, green_thresh: int = 35, min_green: int 
         )
         return _fallback_edge_removal(img_bytes)
 
-    bg_mask_f = bg_mask.astype(np.float32)
-    mask_img = Image.fromarray((bg_mask_f * 255).astype(np.uint8), mode='L')
-    mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=1.0))
+    # 渐变 soft mask：greenness ∈ [green_thresh, green_thresh+30] → 透明度 [0, 1]
+    g_pass = (g >= min_green).astype(np.float32)
+    soft_raw = np.clip((greenness - green_thresh) / 30.0, 0.0, 1.0).astype(np.float32) * g_pass
+
+    # 1px 膨胀 + 高斯模糊，消除半透明绿色边缘
+    mask_img = Image.fromarray((soft_raw * 255).astype(np.uint8), mode='L')
+    mask_img = mask_img.filter(ImageFilter.MaxFilter(3))
+    mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=1.2))
     soft_mask = np.array(mask_img, dtype=np.float32) / 255.0
 
     original_alpha = arr[:, :, 3].astype(np.float32) / 255.0
     new_alpha = original_alpha * (1.0 - soft_mask)
 
+    # Despill：对保留像素去除绿色溢色（g 不得超过 max(r, b)）
+    rgb = arr[:, :, :3].astype(np.float32)
+    mx_rb = np.maximum(rgb[:, :, 0], rgb[:, :, 2])
+    excess = np.clip(rgb[:, :, 1] - mx_rb, 0, None)
+    rgb[:, :, 1] = rgb[:, :, 1] - excess
+
     result = arr.copy()
-    result[:, :, 3] = (new_alpha * 255).astype(np.uint8)
+    result[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    result[:, :, 3] = (np.clip(new_alpha, 0, 1) * 255).astype(np.uint8)
 
     out = Image.fromarray(result.astype(np.uint8), 'RGBA')
     buf = io.BytesIO()

@@ -2481,8 +2481,9 @@ tbody tr:hover { background: var(--surface2); }
 /* 娓告垙鍗＄墖缃戞牸 */
 .uh-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, 260px);
   gap: 20px;
+  justify-content: center;
 }
 
 /* 鍗曞紶娓告垙鍗＄墖 */
@@ -2745,7 +2746,7 @@ tbody tr:hover { background: var(--surface2); }
 @media (max-width: 768px) {
   .uh-topbar { padding: 14px 20px; }
   .uh-content { padding: 32px 20px; }
-  .uh-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+  .uh-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 200px)); gap: 14px; }
 }
 
 /* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲

@@ -209,7 +209,7 @@ export default function LandingPage() {
         ))}
       </motion.div>
 
-      <div className="landing-footer-left">ReverieSoil 梦壤 Mobile 0.6.0</div>
+      <div className="landing-footer-left">ReverieSoil 梦壤 Mobile 0.6.1</div>
       <div className="landing-footer-right">开源版 · WeiCui / 微萃科技</div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={handleSavedConfig} />
