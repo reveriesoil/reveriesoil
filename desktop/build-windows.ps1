@@ -19,6 +19,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# ── 修复 Windows 控制台编码，确保 electron-builder 等 UTF-8 工具输出不乱码 ──
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$env:PYTHONUTF8 = '1'
+
 # ── 路径定义 ──────────────────────────────────────────────────────────────────
 $ScriptDir  = $PSScriptRoot
 $RootDir    = Split-Path $ScriptDir -Parent   # opensource/
