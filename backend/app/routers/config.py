@@ -127,7 +127,7 @@ async def test_model(body: TestModelRequest):
                         "model": body.model,
                         "prompt": "a white cat",
                         "n": 1,
-                        "size": "256x256",
+                        "size": "1920x1920",
                     },
                 )
             elif body.model_type == "voice":
