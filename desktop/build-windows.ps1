@@ -209,25 +209,11 @@ New-Item -ItemType Directory -Force $TmpBuildDir | Out-Null
 
 Push-Location $DesktopDir
 try {
-    # 代码签名：若证书存在则自动注入 electron-builder 环境变量
-    $PfxFile = Join-Path $DesktopDir 'build\reveriesoil-signing.pfx'
-    if (Test-Path $PfxFile) {
-        $env:CSC_LINK           = $PfxFile
-        $env:CSC_KEY_PASSWORD   = "20050503wcz"
-        Write-OK "代码签名证书已加载（微萃科技（沧州）有限公司）"
-    } else {
-        Write-Warn "未找到签名证书，跳过代码签名：$PfxFile"
-    }
-
     # 直接通过命令行参数指定输出目录，完全不修改 package.json
     # 避免任何编码/BOM 问题
     $TmpBuildEsc = $TmpBuildDir -replace '\\', '/'
     npx electron-builder --win --x64 "--config.directories.output=$TmpBuildEsc"
     $ebExit = $LASTEXITCODE
-
-    # 清理签名环境变量，避免污染后续进程
-    Remove-Item Env:\CSC_LINK         -ErrorAction SilentlyContinue
-    Remove-Item Env:\CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
 
     if ($ebExit -ne 0) { Write-Fail "electron-builder 打包失败" }
 } finally {
