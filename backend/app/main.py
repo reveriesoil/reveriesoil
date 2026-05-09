@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import engine
-from app.models import Game, GenerationTask, AIConfig, SaveRecord
+from app.models import Game, GenerationTask, AIConfig
 from app.routers import games_router, tasks_router, config_router
 
 _log_handlers = [logging.StreamHandler()]
