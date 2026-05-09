@@ -66,6 +66,8 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  // 重试确认弹窗
+  const [retryConfirmGame, setRetryConfirmGame] = useState<GameRecord | null>(null)
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -84,8 +86,9 @@ export default function HistoryPage() {
       navigate(`/play/${game.id}`)
     } else if (game.status === 'generating') {
       navigate(`/generating/${game.id}`)
+    } else if (game.status === 'error') {
+      setRetryConfirmGame(game)
     }
-    // 失败状态点击进入重试（从 LandingPage 发起）
   }
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -198,6 +201,15 @@ export default function HistoryPage() {
                           <IconRetry /> 进度
                         </button>
                       )}
+                      {game.status === 'error' && (
+                        <button
+                          className="uh-action-btn"
+                          onClick={e => { e.stopPropagation(); setRetryConfirmGame(game) }}
+                          title="重新生成"
+                        >
+                          <IconRetry /> 重试
+                        </button>
+                      )}
                       <button
                         className="uh-action-btn uh-action-btn--danger"
                         onClick={e => handleDelete(game.id, e)}
@@ -215,6 +227,79 @@ export default function HistoryPage() {
           </motion.div>
         )}
       </div>
+
+      {/* ── 重试确认弹窗 ── */}
+      <AnimatePresence>
+        {retryConfirmGame && (() => {
+          const g = retryConfirmGame
+          let elapsedStr = ''
+          if (g.updated_at && g.created_at) {
+            const secs = Math.round((new Date(g.updated_at).getTime() - new Date(g.created_at).getTime()) / 1000)
+            if (secs > 0) {
+              const m = Math.floor(secs / 60)
+              const s = secs % 60
+              elapsedStr = m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
+            }
+          }
+          return (
+            <>
+              <motion.div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9000 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setRetryConfirmGame(null)}
+              />
+              <motion.div
+                style={{
+                  position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                  zIndex: 9001, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 16, padding: '24px', width: '88%', maxWidth: 340,
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+                }}
+                initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }} transition={{ duration: 0.18 }}
+              >
+                <div style={{ fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,0.9)', marginBottom: 10 }}>
+                  重新生成故事
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>
+                  「{g.title || '未命名故事'}」上次生成失败。
+                </div>
+                {elapsedStr && (
+                  <div style={{ fontSize: 12, color: 'rgba(251,191,36,0.85)', marginBottom: 4 }}>
+                    上次生成耗时：{elapsedStr}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16 }}>
+                  点击确认后将重新发起生成，前往首页并开始新的生成任务。
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'transparent', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 13,
+                    }}
+                    onClick={() => setRetryConfirmGame(null)}
+                  >取消</button>
+                  <button
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff',
+                      cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                    }}
+                    onClick={() => {
+                      setRetryConfirmGame(null)
+                      navigate('/', { state: { retryGameId: g.id, retryPrompt: g.prompt } })
+                    }}
+                  >
+                    重新生成
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )
+        })()}
+      </AnimatePresence>
     </div>
   )
 }

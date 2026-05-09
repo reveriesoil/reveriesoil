@@ -92,4 +92,5 @@ export type GameSummary = {
   cover_url?: string
   cover_image_url?: string
   created_at: string
+  updated_at?: string
 }

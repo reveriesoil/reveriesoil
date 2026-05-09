@@ -6,7 +6,7 @@ import type { AIConfigResponse } from '../types'
 import SettingsModal from '../components/SettingsModal'
 
 // ─── 风格选项 ──────────────────────────────────────────────────────────────────
-const STORY_STYLES = ['言情', '悬疑', '奇幻', '科幻', '治愈', '历史', '恐怖', '冒险']
+const STORY_STYLES = ['言�?, '悬疑', '奇幻', '科幻', '治愈', '历史', '恐�?, '冒险']
 const ART_STYLES   = ['动漫', '写实', '水彩', '像素', '古风', '赛博朋克']
 
 const IconPlay = () => (
@@ -79,15 +79,15 @@ export default function LandingPage() {
     zh: '请用中文完全自动生成一个有趣的视觉小说故事',
     en: 'Please fully automatically generate an interesting visual novel story in English',
     ja: '面白いビジュアルノベルのストーリーを日本語で完全自動生成してください',
-    ko: '흥미로운 비주얼 노벨 스토리를 한국어로 완전 자동으로 생성해 주세요',
+    ko: '흥미로운 비주�?노벨 스토리를 한국어로 완전 자동으로 생성�?주세�?,
   }
 
   const handleSubmit = async () => {
     setError('')
-    if (!savedConfig) { setError('请先点击右上角「设置」配置 AI 模型 API Key'); return }
-    if (!autoGen && !storyPrompt.trim()) { setError('请输入故事提示词，或勾选"完全自动生成"'); return }
-    if (!storyStyle) { setError('请选择故事风格类型（言情/悬疑/奇幻 等）'); return }
-    if (!artStyle)   { setError('请选择绘画风格（动漫/写实/水彩 等）'); return }
+    if (!savedConfig) { setError('请先点击右上角「设置」配�?AI 模型 API Key'); return }
+    if (!autoGen && !storyPrompt.trim()) { setError('请输入故事提示词，或勾�?完全自动生成"'); return }
+    if (!storyStyle) { setError('请选择故事风格类型（言�?悬疑/奇幻 等）'); return }
+    if (!artStyle)   { setError('请选择绘画风格（动�?写实/水彩 等）'); return }
     const finalPrompt = autoGen
       ? (AUTO_LANG_PROMPTS[autoLang] ?? AUTO_LANG_PROMPTS['zh'])
       : storyPrompt.trim()
@@ -98,15 +98,14 @@ export default function LandingPage() {
       voice_model: savedConfig.voice_model,
     } : {}
 
-    // 格式化人物设定（性格 + 形象 拆分）
-    const charLines = characters
+    // 格式化人物设定（性格 + 形象 拆分�?    const charLines = characters
       .filter(c => c.name.trim() || c.personality.trim() || c.appearance.trim())
       .map((c, i) => {
-        const head = `角色${i + 1}${c.name.trim() ? '「' + c.name.trim() + '」' : ''}`
+        const head = `角色${i + 1}${c.name.trim() ? '�? + c.name.trim() + '�? : ''}`
         const segs: string[] = []
-        if (c.personality.trim()) segs.push(`性格：${c.personality.trim()}`)
-        if (c.appearance.trim())  segs.push(`形象：${c.appearance.trim()}`)
-        return `${head}：${segs.join('；')}`
+        if (c.personality.trim()) segs.push(`性格�?{c.personality.trim()}`)
+        if (c.appearance.trim())  segs.push(`形象�?{c.appearance.trim()}`)
+        return `${head}�?{segs.join('�?)}`
       })
     const charPromptStr = charLines.length >= 1 ? charLines.join('\n') : ''
 
@@ -135,7 +134,7 @@ export default function LandingPage() {
   }
 
   const menuItems = [
-    { icon: <IconPlay />,    label: '开始游戏', onClick: openPanel },
+    { icon: <IconPlay />,    label: '开始游�?, onClick: openPanel },
     { icon: <IconHistory />, label: '我的故事', onClick: () => navigate('/history') },
   ]
 
@@ -193,7 +192,7 @@ export default function LandingPage() {
         ))}
       </motion.div>
 
-      <div className="landing-footer-left">ReverieSoil 梦壤 OSS 0.6.1</div>
+      <div className="landing-footer-left">ReverieSoil 梦壤 OSS 0.6.2</div>
       <div className="landing-footer-right">开源版 · WeiCui / 微萃科技</div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
@@ -213,7 +212,7 @@ export default function LandingPage() {
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
             >
               <div className="setup-header">
-                <span className="setup-title">开始游戏</span>
+                <span className="setup-title">开始游�?/span>
                 <button className="setup-close-btn" onClick={closePanel} disabled={loading} aria-label="关闭"><IconClose /></button>
               </div>
 
@@ -221,7 +220,7 @@ export default function LandingPage() {
 
               {!savedConfig && (
                 <div className="setup-error" style={{ marginBottom: 8 }}>
-                  ⚠️ 尚未配置 AI 模型，请先点击右上角「设置」填写 API Key
+                  ⚠️ 尚未配置 AI 模型，请先点击右上角「设置」填�?API Key
                   <button
                     type="button"
                     style={{ marginLeft: 10, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit' }}
@@ -240,7 +239,7 @@ export default function LandingPage() {
                   <div className="setup-field">
                     <label className="setup-label">生成语言</label>
                     <div className="setup-pills">
-                      {([['zh', '中文'], ['en', 'English'], ['ja', '日語'], ['ko', '한국어']] as [string, string][]).map(([val, label]) => (
+                      {([['zh', '中文'], ['en', 'English'], ['ja', '日語'], ['ko', '한국�?]] as [string, string][]).map(([val, label]) => (
                         <button key={val} type="button"
                           className={`setup-pill${autoLang === val ? ' setup-pill--active' : ''}`}
                           onClick={() => setAutoLang(val)}
@@ -251,7 +250,7 @@ export default function LandingPage() {
                 )}
 
                 <div className="setup-field">
-                  <label className="setup-label">故事标题<span className="setup-optional"> （选填）</span></label>
+                  <label className="setup-label">故事标题<span className="setup-optional"> （选填�?/span></label>
                   <input type="text" className="setup-style-input"
                     placeholder="为你的故事起个名字，留空则由 AI 自动取名"
                     value={storyTitle} onChange={e => setStoryTitle(e.target.value)}
@@ -286,9 +285,9 @@ export default function LandingPage() {
                   <div className="uh-depth-btns">
                     {[
                       { level: 1, label: '轻盈', desc: '直白温暖'    },
-                      { level: 2, label: '标准', desc: '易读有层次'  },
+                      { level: 2, label: '标准', desc: '易读有层�?  },
                       { level: 3, label: '深沉', desc: '含蓄有潜台词'},
-                      { level: 4, label: '厚重', desc: '多义耐细品'  },
+                      { level: 4, label: '厚重', desc: '多义耐细�?  },
                       { level: 5, label: '极致', desc: '余韵无穷'    },
                     ].map(d => (
                       <button key={d.level} type="button"
@@ -304,13 +303,13 @@ export default function LandingPage() {
                 </div>
 
                 <div className="setup-field">
-                  <label className="setup-label">交互程度<span className="setup-optional"> 越高 → 选择节点越多，剧情走向更多元</span></label>
+                  <label className="setup-label">交互程度<span className="setup-optional"> 越高 �?选择节点越多，剧情走向更多元</span></label>
                   <div className="uh-depth-btns">
                     {[
                       { level: 1, label: '沉浸观影', desc: '全程无选择'   },
                       { level: 2, label: '轻度',     desc: '1 个关键选择' },
-                      { level: 3, label: '标准',     desc: '2-3 个分支'   },
-                      { level: 4, label: '高互动',   desc: '4-5 个分支'   },
+                      { level: 3, label: '标准',     desc: '2-3 个分�?   },
+                      { level: 4, label: '高互�?,   desc: '4-5 个分�?   },
                       { level: 5, label: '极致',     desc: '多结局网状'   },
                     ].map(d => (
                       <button key={d.level} type="button"
@@ -326,15 +325,15 @@ export default function LandingPage() {
                 </div>
 
                 <div className="setup-field">
-                  <label className="setup-label">故事提示词{autoGen && <span className="setup-optional"> （已自动）</span>}</label>
+                  <label className="setup-label">故事提示词{autoGen && <span className="setup-optional"> （已自动�?/span>}</label>
                   <textarea className="setup-textarea" rows={3} disabled={autoGen}
-                    placeholder="例：一个少女在废弃图书馆发现了一封来自未来的信..."
+                    placeholder="例：一个少女在废弃图书馆发现了一封来自未来的�?.."
                     value={storyPrompt} onChange={e => setStoryPrompt(e.target.value)}
                   />
                 </div>
 
                 <div className="setup-field">
-                  <label className="setup-label">人物设定<span className="setup-optional"> （选填，留空则由 AI 自动生成）</span></label>
+                  <label className="setup-label">人物设定<span className="setup-optional"> （选填，留空则�?AI 自动生成�?/span></label>
                   <div className="char-list">
                     {characters.map((char, idx) => (
                       <div key={idx} className="char-row">
@@ -342,7 +341,7 @@ export default function LandingPage() {
                         <input
                           className="char-name-input"
                           type="text"
-                          placeholder="角色名"
+                          placeholder="角色�?
                           disabled={autoGen}
                           value={char.name}
                           onChange={e => {
@@ -355,7 +354,7 @@ export default function LandingPage() {
                           <textarea
                             className="char-desc-input"
                             rows={2}
-                            placeholder="人物性格设定（如：内向、聪明、外冷内热...）"
+                            placeholder="人物性格设定（如：内向、聪明、外冷内�?..�?
                             disabled={autoGen}
                             value={char.personality}
                             onChange={e => {
@@ -367,7 +366,7 @@ export default function LandingPage() {
                           <textarea
                             className="char-desc-input"
                             rows={2}
-                            placeholder="人物形象设定（如：长发蓝瞳、红色制服、身高约 165cm...）"
+                            placeholder="人物形象设定（如：长发蓝瞳、红色制服、身高约 165cm...�?
                             disabled={autoGen}
                             value={char.appearance}
                             onChange={e => {
@@ -392,7 +391,7 @@ export default function LandingPage() {
                         className="char-add-btn"
                         disabled={autoGen}
                         onClick={() => setCharacters([...characters, { name: '', personality: '', appearance: '' }])}
-                      >＋ 添加角色</button>
+                      >�?添加角色</button>
                     )}
                   </div>
                 </div>
@@ -445,9 +444,9 @@ export default function LandingPage() {
                   whileTap={loading ? {} : { scale: 0.98 }}
                 >
                   {loading ? (
-                    <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> 生成中...</>
+                    <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> 生成�?..</>
                   ) : (
-                    <><IconStart /> 开始生成</>
+                    <><IconStart /> 开始生�?/>
                   )}
                 </motion.button>
               </div>

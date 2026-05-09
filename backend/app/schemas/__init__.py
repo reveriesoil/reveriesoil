@@ -51,6 +51,7 @@ class GameSummary(BaseModel):
     estimated_duration: Optional[int] = None
     cover_url: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

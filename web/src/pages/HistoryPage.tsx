@@ -81,6 +81,9 @@ export default function HistoryPage() {
   const [statsGameId, setStatsGameId] = useState<string | null>(null)
   const [statsData, setStatsData] = useState<GameStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  // 重试确认弹窗
+  const [retryConfirmGame, setRetryConfirmGame] = useState<GameSummary | null>(null)
+  const [retrying, setRetrying] = useState(false)
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -118,15 +121,21 @@ export default function HistoryPage() {
       return
     }
     if (isFailedStatus(game.status)) {
-      setEnteringId(game.id)
-      try {
-        const res = await retryGame(game.id)
-        navigate(`/generating/${game.id}?task_id=${res.data.task_id}`)
-      } catch {
-        navigate(`/generating/${game.id}`)
-      } finally {
-        setEnteringId(null)
-      }
+      setRetryConfirmGame(game)
+    }
+  }
+
+  const handleRetryConfirm = async () => {
+    if (!retryConfirmGame || retrying) return
+    setRetrying(true)
+    try {
+      const res = await retryGame(retryConfirmGame.id)
+      setRetryConfirmGame(null)
+      navigate(`/generating/${retryConfirmGame.id}?task_id=${res.data.task_id}`)
+    } catch {
+      navigate(`/generating/${retryConfirmGame.id}`)
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -448,6 +457,77 @@ export default function HistoryPage() {
             </motion.div>
           </>
         )}
+      </AnimatePresence>
+
+      {/* ── 重试确认弹窗 ── */}
+      <AnimatePresence>
+        {retryConfirmGame && (() => {
+          const g = retryConfirmGame
+          let elapsedStr = ''
+          if (g.updated_at && g.created_at) {
+            const secs = Math.round((new Date(g.updated_at).getTime() - new Date(g.created_at).getTime()) / 1000)
+            if (secs > 0) {
+              const m = Math.floor(secs / 60)
+              const s = secs % 60
+              elapsedStr = m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
+            }
+          }
+          return (
+            <>
+              <motion.div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9000 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => !retrying && setRetryConfirmGame(null)}
+              />
+              <motion.div
+                style={{
+                  position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                  zIndex: 9001, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 16, padding: '24px', width: '90%', maxWidth: 360,
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+                }}
+                initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <div style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)', marginBottom: 12 }}>
+                  重新生成故事
+                </div>
+                <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>
+                  「{g.title || '未命名故事'}」上次生成失败。
+                </div>
+                {elapsedStr && (
+                  <div style={{ fontSize: 13, color: 'rgba(251,191,36,0.85)', marginBottom: 16 }}>
+                    上次生成耗时：{elapsedStr}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                  <button
+                    style={{
+                      padding: '8px 18px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'transparent', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 13,
+                    }}
+                    onClick={() => setRetryConfirmGame(null)}
+                    disabled={retrying}
+                  >取消</button>
+                  <button
+                    style={{
+                      padding: '8px 18px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff',
+                      cursor: retrying ? 'wait' : 'pointer', fontSize: 13, fontWeight: 500,
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}
+                    onClick={handleRetryConfirm}
+                    disabled={retrying}
+                  >
+                    {retrying && <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />}
+                    重新生成
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )
+        })()}
       </AnimatePresence>
     </div>
   )
