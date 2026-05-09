@@ -873,7 +873,17 @@ async def generate_image_prompts(
     endpoint: Optional[str],
 ) -> Dict[str, Any]:
     """执行导演：将艺术指导转化为可直接送入图像生成模型的详细 prompt。"""
-    system = """你是执行导演，负责将艺术总监的风格指导转化为具体的 AI 绘图提示词。
+    _user_art = (outline.get("user_art_style") or "").strip()
+    _style_examples = {
+        "动漫": "anime style, cel shading, clean line art, vibrant colors, 2D illustration",
+        "写实": "realistic, photorealistic, highly detailed, cinematic photography style",
+        "水彩": "watercolor painting, soft brushstrokes, painterly, aquarelle art style",
+        "像素": "pixel art, 8-bit sprite style, retro game graphics, pixelated, low-res aesthetic",
+        "古风": "traditional Chinese ink painting, guofeng style, wuxia aesthetic, brush calligraphy art",
+        "赛博朋克": "cyberpunk style, neon-lit, futuristic dystopian, synthwave, holographic effects",
+    }
+    _art_style_hint = _style_examples.get(_user_art, "match the global_art_style from the director vision exactly")
+    system = f"""你是执行导演，负责将艺术总监的风格指导转化为具体的 AI 绘图提示词。
 
 要求：
 - 每个 prompt 须整合全局风格 + 场景/人物专属风格
@@ -885,7 +895,7 @@ async def generate_image_prompts(
   • 构图关键词（必须包含）：full body shot, standing pose, centered in frame, looking at viewer, facing camera, complete figure with feet visible
   • 质量关键词（必须包含）：masterpiece, best quality, highres, ultra detailed, sharp focus
   • 背景关键词（必须包含）：pure solid green background, chroma key green #00FF00, no background details, no shadows
-  • 风格关键词（与全局艺术风格一致，如）：anime style, cel shading, clean line art, vibrant colors, 2D illustration
+  • 风格关键词（必须严格遵循用户指定的【{_user_art or "全局艺术风格"}】，使用如下关键词）：{_art_style_hint}
   • base_prompt 字数不低于 60 个英文单词
 
 - 人物 expression_prompts：为 normal/happy/sad/surprised/angry/shy/serious/hurt 每种表情输出完整 prompt（= base_prompt 全文 + 该表情的表情细节描述，如 "gentle smile, bright eyes, slightly raised corners of mouth"）；不同表情的 base 内容必须与 base_prompt 保持一致
@@ -1524,6 +1534,7 @@ def _build_script(
         "genre": outline.get("genre", ""),
         "theme": outline.get("theme", ""),
         "synopsis": outline.get("synopsis", ""),
+        "user_art_style": outline.get("user_art_style", ""),
         "global_style": director.get("global_art_style", "anime style"),
         "color_palette": director.get("color_palette", ""),
         "lighting_style": director.get("lighting_style", ""),

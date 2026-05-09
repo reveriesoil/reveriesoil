@@ -254,7 +254,18 @@ class GenerationOrchestrator:
         self._validate_scene_count(scenes, target_scene_count)
 
         script = text_gen._build_script(outline, director, img_prompts, scenes)
-        global_style = script.get("global_style", "anime style, detailed illustration")
+        # 优先用用户选择的风格名称做确定性映射，避免 LLM 翻译偏差导致风格错误
+        _ART_STYLE_MAP = {
+            "动漫": "2D anime style, cel shading, clean line art, vibrant colors, 2D illustration",
+            "写实": "realistic photorealistic style, high detail, cinematic photography",
+            "水彩": "watercolor painting style, soft brushstrokes, painterly, aquarelle",
+            "像素": "pixel art style, 8-bit retro game sprite, pixelated, low-resolution aesthetic",
+            "古风": "traditional Chinese ink painting style, wuxia aesthetic, classical brush art, guofeng",
+            "赛博朋克": "cyberpunk neon-lit style, futuristic dystopian, synthwave aesthetic, neon city",
+        }
+        _user_art = (outline.get("user_art_style") or "").strip()
+        _llm_global_style = script.get("global_style", "anime style, detailed illustration")
+        global_style = _ART_STYLE_MAP.get(_user_art, _llm_global_style)
         characters = script.get("characters", [])
 
         if on_script_ready:
@@ -395,7 +406,18 @@ class GenerationOrchestrator:
         script = copy.deepcopy(script)
         characters = script.get("characters", [])
         scenes = script.get("scenes", [])
-        global_style = script.get("global_style", "anime style, detailed illustration")
+        # 优先用保存的用户风格做确定性映射，避免 LLM 翻译偏差
+        _ART_STYLE_MAP = {
+            "动漫": "2D anime style, cel shading, clean line art, vibrant colors, 2D illustration",
+            "写实": "realistic photorealistic style, high detail, cinematic photography",
+            "水彩": "watercolor painting style, soft brushstrokes, painterly, aquarelle",
+            "像素": "pixel art style, 8-bit retro game sprite, pixelated, low-resolution aesthetic",
+            "古风": "traditional Chinese ink painting style, wuxia aesthetic, classical brush art, guofeng",
+            "赛博朋克": "cyberpunk neon-lit style, futuristic dystopian, synthwave aesthetic, neon city",
+        }
+        _user_art = (script.get("user_art_style") or "").strip()
+        _llm_global_style = script.get("global_style", "anime style, detailed illustration")
+        global_style = _ART_STYLE_MAP.get(_user_art, _llm_global_style)
 
         assets_manifest: Dict[str, Any] = {
             "portraits": {}, "backgrounds": {}, "cg": {}, "voices": {}, "bgm": {},
