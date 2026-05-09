@@ -319,6 +319,24 @@ async def export_game(game_id: str, db: AsyncSession = Depends(get_db)):
 # ── 导入 ─────────────────────────────────────────────────────────────────────
 
 _IMPORT_MAX_BYTES = 500 * 1024 * 1024  # 500 MB 上限，防止 OOM
+_IMPORT_MAX_EXTRACTED = 1024 * 1024 * 1024  # 1 GB 解压总量上限，防 zip bomb
+
+
+def _replace_game_id(obj, old: str, new: str):
+    """递归遍历 JSON 树，将 old game_id 精确替换为 new game_id（避免误伤其他字段）。"""
+    if not old:
+        return obj
+    if isinstance(obj, str):
+        if obj == old:
+            return new
+        if f"games/{old}/" in obj:
+            return obj.replace(f"games/{old}/", f"games/{new}/")
+        return obj
+    if isinstance(obj, dict):
+        return {k: _replace_game_id(v, old, new) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_replace_game_id(x, old, new) for x in obj]
+    return obj
 
 
 @router.post("/import", status_code=status.HTTP_201_CREATED, response_model=GameSummary)
@@ -345,11 +363,8 @@ async def import_game(
             old_game_id = meta.get("game_id") or ""
             new_game_id = str(uuid.uuid4())
 
-            # 将 JSON 字符串中所有旧 game_id 替换为新 game_id
-            meta_str = json.dumps(meta, ensure_ascii=False)
-            if old_game_id:
-                meta_str = meta_str.replace(old_game_id, new_game_id)
-            updated = json.loads(meta_str)
+            # 递归 JSON 树遍历替换 game_id（精确匹配，避免误伤）
+            updated = _replace_game_id(meta, old_game_id, new_game_id)
 
             # 提取封面 URL
             cover_url = updated.get("cover_url")
@@ -373,22 +388,28 @@ async def import_game(
             )
             db.add(game)
 
-            # 解压资源文件（防 Zip Slip：校验路径在 assets_base 内）
+            # 解压资源文件（防 Zip Slip：校验路径在 assets_base 内 + 解压总量限制）
             assets_base = Path(settings.static_dir).resolve()
+            total_extracted = 0
             for name in zf.namelist():
                 if not name.startswith("assets/"):
                     continue
                 rel = name[len("assets/"):]
-                if old_game_id:
-                    rel = rel.replace(old_game_id, new_game_id)
-                if not rel:
+                # Zip Slip 一级校验：拒绝路径穿越和绝对路径
+                if not rel or ".." in rel.split("/") or rel.startswith(("/", "\\")) or ":" in rel:
                     continue
+                if old_game_id:
+                    rel = rel.replace(f"games/{old_game_id}/", f"games/{new_game_id}/")
                 dest = (assets_base / rel).resolve()
                 # 安全校验：目标路径必须在 assets_base 内
                 if not str(dest).startswith(str(assets_base)):
                     continue
+                data = zf.read(name)
+                total_extracted += len(data)
+                if total_extracted > _IMPORT_MAX_EXTRACTED:
+                    raise HTTPException(status_code=413, detail="解压后内容过大，疑似恶意压缩包")
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(zf.read(name))
+                dest.write_bytes(data)
 
             await db.commit()
             await db.refresh(game)

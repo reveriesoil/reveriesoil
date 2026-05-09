@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
 
     # CORS 白名单（逗号分隔；留空则回退到 frontend_url）
+    # 安全提示：值为 "*" 仅供桌面/移动端本地使用（此时 allow_credentials 会被自动关闭）。
+    # Web 部署务必填写明确的来源域名，避免任意来源访问 API。
     cors_allow_origins: str = ""
 
     # 后端公网地址（用于图片 URL 拼接，留空则自动使用请求 host）
