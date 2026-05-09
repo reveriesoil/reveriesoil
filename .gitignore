@@ -37,6 +37,9 @@ desktop/dist-installer/
 desktop/dist-v*/
 desktop/pyinstaller-work/
 desktop/build/*.ico
+# 代码签名证书（含私钥，不入库）
+desktop/build/*.pfx
+desktop/build/*.p12
 
 # 编辑器
 .vscode/
