@@ -48,24 +48,59 @@ def _get_rembg_session():
 
 
 def _despill_green(img: Image.Image) -> Image.Image:
-    """对 RGBA 图像做绿色溢色抑制：
-    - 对所有像素，若 g > max(r, b)，把 g 拉回到 max(r, b)
-    - 对边缘半透明像素（10 < alpha < 220），额外把 g 进一步压向 (r+b)/2，去除边缘绿色 halo
+    """对 RGBA 图像做绿色溢色抑制（v0.7.3 强化版）：
+
+    1. 全图：若 g > max(r, b)，把 g 拉到 max(r, b)，消除整体绿染。
+    2. 边缘半透明像素（10 < alpha < 220）：g 进一步拉向 (r+b)/2，处理 halo。
+    3. **纯绿幕色像素**（高饱和绿，rembg 误判为前景的）：
+       - 直接置 alpha = 0（视为背景），同时把 RGB 拉成中性灰，避免 alpha=0 时遗留绿色。
+       判定：g - max(r,b) > 35 且 g > 90 且 b < 200（剔除纯青色的合理颜色，只杀绿幕）。
+    4. 边缘半透明（10 < alpha < 220）若存在显著 g 优势再做一次更深的 desaturation。
     """
     if img.mode != "RGBA":
         img = img.convert("RGBA")
     arr = np.array(img, dtype=np.int32)
     rgb = arr[:, :, :3].astype(np.float32)
-    a = arr[:, :, 3]
-    mx_rb = np.maximum(rgb[:, :, 0], rgb[:, :, 2])
-    excess = np.clip(rgb[:, :, 1] - mx_rb, 0, None)
-    rgb[:, :, 1] = rgb[:, :, 1] - excess
-    # 边缘像素再做一次（更激进）：g 拉向 (r+b)/2
+    a = arr[:, :, 3].astype(np.float32)
+
+    r_ch = rgb[:, :, 0]
+    g_ch = rgb[:, :, 1]
+    b_ch = rgb[:, :, 2]
+    mx_rb = np.maximum(r_ch, b_ch)
+
+    # ── ① 全图溢色压制 ──────────────────────────────
+    excess = np.clip(g_ch - mx_rb, 0, None)
+    g_ch = g_ch - excess
+
+    # ── ② 边缘 halo 进一步压制 ──────────────────────
     edge_mask = (a > 10) & (a < 220)
     if edge_mask.any():
-        target_g = (rgb[:, :, 0] + rgb[:, :, 2]) * 0.5
-        rgb[edge_mask, 1] = np.minimum(rgb[edge_mask, 1], target_g[edge_mask])
+        target_g = (r_ch + b_ch) * 0.5
+        g_ch = np.where(edge_mask, np.minimum(g_ch, target_g), g_ch)
+
+    # ── ③ 纯绿幕像素：强制透明 + 中性化 ──────────────
+    #     用更新后的 g_ch 与原始 max(r,b) 比较，判断仍残留高绿饱和的
+    pure_green = (rgb[:, :, 1] - mx_rb > 35) & (rgb[:, :, 1] > 90) & (b_ch < 200)
+    if pure_green.any():
+        a = np.where(pure_green, 0.0, a)
+        # 把这些像素 RGB 也归一到灰（避免渲染管线对透明像素做边缘混合时再泛绿）
+        gray = (r_ch + b_ch) * 0.5
+        r_ch = np.where(pure_green, gray, r_ch)
+        g_ch = np.where(pure_green, gray, g_ch)
+        b_ch = np.where(pure_green, gray, b_ch)
+
+    # ── ④ 边缘强绿优势再 desaturate（针对 rembg alpha matting 的半透明 halo）
+    strong_edge_green = edge_mask & (rgb[:, :, 1] - mx_rb > 15)
+    if strong_edge_green.any():
+        avg = (r_ch + b_ch) * 0.5
+        # 把 g 一路压到 avg * 0.95
+        g_ch = np.where(strong_edge_green, np.minimum(g_ch, avg * 0.95), g_ch)
+
+    rgb[:, :, 0] = r_ch
+    rgb[:, :, 1] = g_ch
+    rgb[:, :, 2] = b_ch
     arr[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    arr[:, :, 3] = np.clip(a, 0, 255).astype(np.uint8)
     return Image.fromarray(arr.astype(np.uint8), "RGBA")
 
 
@@ -79,13 +114,24 @@ def _smooth_alpha(img: Image.Image, blur_radius: float = 0.6) -> Image.Image:
 
 
 def _cutout_with_rembg(raw_bytes: bytes) -> Optional[bytes]:
-    """用 rembg 抠图，成功返回 PNG 字节，失败返回 None。"""
+    """用 rembg 抠图，成功返回 PNG 字节，失败返回 None。
+
+    两级策略：
+    1. 优先 alpha_matting（需 pymatting + scipy）—— 边缘最干净
+    2. 失败则降级为 plain mask（仅 onnxruntime）—— 边缘较硬，由 _despill_green 兜底
+    """
     session = _get_rembg_session()
     if session is None:
         return None
     try:
         from rembg import remove  # type: ignore
-        # 提升前景判定阈值，减少半透明背景残留
+    except Exception as e:
+        logger.warning("rembg 导入 remove 失败，回退色域抠图: %s", e)
+        return None
+
+    out_bytes: Optional[bytes] = None
+    # ── ① alpha_matting 路径 ──
+    try:
         out_bytes = remove(
             raw_bytes,
             session=session,
@@ -94,6 +140,19 @@ def _cutout_with_rembg(raw_bytes: bytes) -> Optional[bytes]:
             alpha_matting_background_threshold=15,
             alpha_matting_erode_size=4,
         )
+    except Exception as e:
+        logger.info("rembg alpha_matting 不可用（缺 pymatting/scipy？），降级 plain mask: %s", e)
+        out_bytes = None
+
+    # ── ② plain mask 路径（不依赖 pymatting）──
+    if out_bytes is None:
+        try:
+            out_bytes = remove(raw_bytes, session=session)
+        except Exception as e:
+            logger.warning("rembg plain mask 也失败，回退色域抠图: %s", e)
+            return None
+
+    try:
         out = Image.open(io.BytesIO(out_bytes)).convert("RGBA")
         out = _despill_green(out)
         out = _smooth_alpha(out, blur_radius=0.6)
@@ -101,7 +160,7 @@ def _cutout_with_rembg(raw_bytes: bytes) -> Optional[bytes]:
         out.save(buf, "PNG")
         return buf.getvalue()
     except Exception as e:
-        logger.warning("rembg 抠图失败，回退到色域抠图: %s", e)
+        logger.warning("rembg 后处理失败: %s", e)
         return None
 
 

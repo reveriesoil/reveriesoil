@@ -6,6 +6,8 @@ PyInstaller spec — ReverieSoil 开源版后端
 """
 
 import os
+from PyInstaller.utils.hooks import collect_all, collect_submodules
+
 _backend_dir = r'c:\Users\Administrator\Desktop\Dream It\opensource\backend'
 
 block_cipher = None
@@ -13,17 +15,36 @@ block_cipher = None
 # ── rembg 模型权重打包：避免桌面用户首次运行需联网下载 176MB ──
 _u2net_local = os.path.join(os.path.expanduser('~'), '.u2net', 'u2net.onnx')
 _extra_datas = []
+_extra_binaries = []
+_extra_hidden = []
 if os.path.exists(_u2net_local):
     # 打包后路径：sys._MEIPASS/u2net_models/u2net.onnx
     # 运行时由 server.py 设置 U2NET_HOME 指向该目录
     _extra_datas.append((_u2net_local, 'u2net_models'))
 
+# ── rembg / 抠像依赖：用 collect_all 收齐源码 + 数据 + entry-points ──
+# 仅列 hiddenimports 不足以打包 rembg（含 pooch、dynamic providers），必须 collect_all。
+# 注意：不要 collect_all('onnxruntime') / 'numba'，它们会通过 onnxruntime.tools 把 torch 拖进来。
+for _pkg in ('rembg', 'pooch', 'pymatting', 'pymatting_aot'):
+    try:
+        _d, _b, _h = collect_all(_pkg)
+        _extra_datas += _d
+        _extra_binaries += _b
+        # 过滤掉会触发 torch 导入的 rembg.commands（CLI 用不到）
+        _extra_hidden += [m for m in _h if not m.startswith('rembg.commands')]
+    except Exception as _e:
+        # 某些可选包缺失时跳过，rembg 仍可用 plain mask 模式
+        print(f'[backend.spec] skip collect_all({_pkg}): {_e}')
+
+# 显式补充 rembg sessions 子模块（懒加载注册）
+_extra_hidden += collect_submodules('rembg.sessions')
+
 a = Analysis(
     [os.path.join(_backend_dir, 'server.py')],
     pathex=[_backend_dir],
-    binaries=[],
+    binaries=_extra_binaries,
     datas=_extra_datas,
-    hiddenimports=[
+    hiddenimports=_extra_hidden + [
         # ── asyncio / anyio ──────────────────────────────────────
         'anyio',
         'anyio._backends._asyncio',
@@ -146,9 +167,14 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'tkinter', 'matplotlib', 'scipy',
+        'tkinter', 'matplotlib',
         'cv2', 'pandas', 'IPython',
         'test', 'unittest',
+        # ↓ 排除会被 numba/pymatting/onnxruntime 间接拖入的巨型依赖（>3GB）
+        'torch', 'torchvision', 'torchaudio',
+        'tensorflow', 'jax', 'sklearn',
+        'onnx', 'onnxruntime.tools',
+        'rembg.commands', 'filetype',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

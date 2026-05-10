@@ -509,25 +509,35 @@ export default function HistoryPage() {
                 </div>
               ) : statsData ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
-                  {[
-                    { label: '总图片数量', value: statsData.total_images, unit: '张' },
-                    { label: '人物立绘数量', value: statsData.portrait_count, unit: '张' },
-                    { label: '背景图数量', value: statsData.background_count, unit: '张' },
-                    { label: 'CG 图数量', value: statsData.cg_count, unit: '张' },
-                    { label: '消耗 Token', value: statsData.token_usage.toLocaleString(), unit: '' },
-                    { label: '故事总字数', value: statsData.total_words.toLocaleString(), unit: '字' },
-                    { label: '总幕数', value: statsData.scene_count, unit: '幕' },
-                  ].map(item => (
-                    <div key={item.label} style={{
-                      background: 'rgba(255,255,255,0.04)', borderRadius: 8,
-                      padding: '10px 14px', border: '1px solid rgba(255,255,255,0.07)',
-                    }}>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>{item.label}</div>
-                      <div style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
-                        {item.value}<span style={{ fontSize: 12, fontWeight: 400, marginLeft: 2, color: 'rgba(255,255,255,0.5)' }}>{item.unit}</span>
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    const items = [
+                      { label: '总图片数量', value: statsData.total_images, unit: '张' },
+                      { label: '人物立绘数量', value: statsData.portrait_count, unit: '张' },
+                      { label: '背景图数量', value: statsData.background_count, unit: '张' },
+                      { label: 'CG 图数量', value: statsData.cg_count, unit: '张' },
+                      { label: '消耗 Token', value: statsData.token_usage.toLocaleString(), unit: '' },
+                      { label: '故事总字数', value: statsData.total_words.toLocaleString(), unit: '字' },
+                      { label: '总幕数', value: statsData.scene_count, unit: '幕' },
+                    ]
+                    const isOdd = items.length % 2 === 1
+                    return items.map((item, idx) => {
+                      const last = idx === items.length - 1
+                      const span = isOdd && last
+                      return (
+                        <div key={item.label} style={{
+                          background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                          padding: '10px 14px', border: '1px solid rgba(255,255,255,0.07)',
+                          gridColumn: span ? '1 / -1' : undefined,
+                          textAlign: span ? 'center' : 'left',
+                        }}>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>{item.label}</div>
+                          <div style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+                            {item.value}<span style={{ fontSize: 12, fontWeight: 400, marginLeft: 2, color: 'rgba(255,255,255,0.5)' }}>{item.unit}</span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  })()}
                 </div>
               ) : null}
               {/* 封面操作按钮 */}

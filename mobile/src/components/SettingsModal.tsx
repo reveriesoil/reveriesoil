@@ -277,6 +277,45 @@ export default function SettingsModal({ open, onClose, onSaved }: {
                 )}
               </section>
 
+              {/* 语音模型占位 — v0.7.x 后续版本支持 */}
+              <section
+                className="sm-section"
+                style={{ opacity: 0.62, position: 'relative' }}
+                aria-disabled
+              >
+                <header className="sm-section-head">
+                  <span className="sm-section-icon">
+                    <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 2v14M5 6v6M13 6v6M2 8v2M16 8v2" />
+                    </svg>
+                  </span>
+                  <div className="sm-section-titles">
+                    <div className="sm-section-title">
+                      语音模型（角色配音）
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          fontSize: 10.5,
+                          padding: '1px 7px',
+                          borderRadius: 8,
+                          background: 'rgba(255, 200, 80, 0.18)',
+                          color: '#ffcc66',
+                          border: '1px solid rgba(255, 200, 80, 0.35)',
+                          fontWeight: 500,
+                          letterSpacing: 0.2,
+                        }}
+                      >
+                        即将支持
+                      </span>
+                    </div>
+                    <div className="sm-section-desc">
+                      将对话文本合成为角色配音 — 移动端 TTS 适配将在后续版本（v0.7.3+）开放。当前可在 Web/桌面端正常使用。
+                    </div>
+                  </div>
+                </header>
+                <div className="sm-skipped-tip"><IconInfo /> <span>本端暂未集成端侧/云端 TTS 通路；剧本仍可正常生成与游玩，仅无 AI 配音。</span></div>
+              </section>
+
               {msg && (
                 <div className={`sm-msg ${msg.type === 'error' ? 'sm-msg--error' : 'sm-msg--success'}`}>
                   {msg.type === 'error' ? <IconInfo /> : <IconCheck />}
