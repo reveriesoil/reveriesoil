@@ -86,7 +86,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Dream It — 开源版",
-    version="0.35.0",
+    version="0.7.1",
     description="AI 互动故事生成引擎（开源版，无需注册，自带 API 配置，支持故事导出/导入）",
     lifespan=lifespan,
 )

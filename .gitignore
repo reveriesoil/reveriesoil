@@ -53,3 +53,14 @@ Thumbs.db
 *.log
 
 .github_token.local
+
+# 移动端构建产物
+mobile/node_modules/
+mobile/dist/
+mobile/dist-installer/
+mobile/.vite/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/keystore.properties
+mobile/android/local.properties

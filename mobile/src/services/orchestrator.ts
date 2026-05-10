@@ -94,6 +94,39 @@ async function compressDataUrl(dataUrl: string, quality = 0.75): Promise<string>
   })
 }
 
+/**
+ * 立绘专用压缩：保留 alpha 通道（PNG），按最长边等比缩放到 maxLongEdge。
+ * 不能用 JPEG（会丢透明背景）。
+ */
+async function compressPortraitDataUrl(dataUrl: string, maxLongEdge = 768): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const sw = img.naturalWidth, sh = img.naturalHeight
+        if (!sw || !sh) { resolve(dataUrl); return }
+        const longEdge = Math.max(sw, sh)
+        const scale = longEdge > maxLongEdge ? maxLongEdge / longEdge : 1
+        const dw = Math.round(sw * scale)
+        const dh = Math.round(sh * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = dw
+        canvas.height = dh
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(dataUrl); return }
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(img, 0, 0, dw, dh)
+        resolve(canvas.toDataURL('image/png'))
+      } catch {
+        resolve(dataUrl)
+      }
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
+
 // ── 编排器 ───────────────────────────────────────────────────────────────────
 
 function resolveTextCfg(
@@ -206,9 +239,11 @@ export async function runGeneration(opts: {
         portraitTasks.push(
           generatePortrait(exprAppearance, expr, globalStyle, imageCfg)
             .then(async dataUrl => {
-              const compressed = await compressDataUrl(dataUrl)
+              // 立绘已在 imageGen.cutoutPortrait 中抠图为带 alpha 的 PNG，
+              // 此处只做等比缩放 + 保留透明通道（不能用 JPEG）
+              const compressed = await compressPortraitDataUrl(dataUrl)
               manifest.portraits[cid][expr] = compressed
-              await putAsset(gameId, `portraits/${cid}_${expr}.jpg`, compressed)
+              await putAsset(gameId, `portraits/${cid}_${expr}.png`, compressed)
             })
             .catch(e => { console.warn(`Portrait ${cid}/${expr} failed:`, e) }),
         )
