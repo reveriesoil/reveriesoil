@@ -79,8 +79,12 @@ export default function HistoryPage() {
   const importInputRef = useRef<HTMLInputElement>(null)
   // 统计弹窗
   const [statsGameId, setStatsGameId] = useState<string | null>(null)
+  const [statsGame, setStatsGame] = useState<GameSummary | null>(null)
   const [statsData, setStatsData] = useState<GameStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  // 封面预览弹窗
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
+  const [savingCover, setSavingCover] = useState(false)
   // 重试确认弹窗
   const [retryConfirmGame, setRetryConfirmGame] = useState<GameSummary | null>(null)
   const [retrying, setRetrying] = useState(false)
@@ -156,6 +160,7 @@ export default function HistoryPage() {
   const handleInfo = async (g: GameSummary, e: React.MouseEvent) => {
     e.stopPropagation()
     setStatsGameId(g.id)
+    setStatsGame(g)
     setStatsData(null)
     setStatsLoading(true)
     try {
@@ -164,8 +169,57 @@ export default function HistoryPage() {
     } catch {
       showToast('获取统计信息失败', false)
       setStatsGameId(null)
+      setStatsGame(null)
     } finally {
       setStatsLoading(false)
+    }
+  }
+
+  const handleViewCover = () => {
+    const cover = statsGame?.cover_url ?? statsGame?.cover_image_url
+    if (!cover) {
+      showToast('该故事没有封面', false)
+      return
+    }
+    setCoverPreviewUrl(cover)
+  }
+
+  const handleSaveCover = async () => {
+    const cover = statsGame?.cover_url ?? statsGame?.cover_image_url
+    if (!cover) {
+      showToast('该故事没有封面', false)
+      return
+    }
+    if (savingCover) return
+    setSavingCover(true)
+    try {
+      const resp = await fetch(cover)
+      if (!resp.ok) throw new Error('fetch failed')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const title = (statsGame?.title || 'cover').replace(/[^\w\-\. ]/g, '').trim() || 'cover'
+      // 推断扩展名
+      const ctype = blob.type || ''
+      let ext = 'png'
+      if (ctype.includes('jpeg') || ctype.includes('jpg')) ext = 'jpg'
+      else if (ctype.includes('webp')) ext = 'webp'
+      else if (ctype.includes('gif')) ext = 'gif'
+      else {
+        const m = cover.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i)
+        if (m) ext = m[1].toLowerCase().replace('jpeg', 'jpg')
+      }
+      a.href = url
+      a.download = `ReverieSoil_${title}_cover.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      showToast('封面已保存')
+    } catch {
+      showToast('保存失败，请稍后重试', false)
+    } finally {
+      setSavingCover(false)
     }
   }
 
@@ -275,9 +329,31 @@ export default function HistoryPage() {
             <div className="uh-empty-icon">📖</div>
             <div className="uh-empty-title">还没有故事</div>
             <div className="uh-empty-desc">创作你的第一个视觉小说，让 AI 把想象变成现实</div>
-            <button className="uh-start-btn" onClick={() => navigate('/')}>
-              开始创作
-            </button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="uh-start-btn" onClick={() => navigate('/')}>
+                开始创作
+              </button>
+              <button
+                className="uh-start-btn"
+                onClick={handleImportClick}
+                disabled={importing}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  color: 'rgba(255,255,255,0.85)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                {importing ? (
+                  <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                ) : (
+                  <IconImport />
+                )}
+                导入故事
+              </button>
+            </div>
           </motion.div>
         ) : (
           <>
@@ -406,7 +482,7 @@ export default function HistoryPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              onClick={() => setStatsGameId(null)}
+                onClick={() => { setStatsGameId(null); setStatsGame(null) }}
             />
             <motion.div
               style={{
@@ -424,7 +500,7 @@ export default function HistoryPage() {
                 <span style={{ fontWeight: 600, fontSize: 16, color: 'rgba(255,255,255,0.9)' }}>故事统计</span>
                 <button
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}
-                  onClick={() => setStatsGameId(null)}
+                  onClick={() => { setStatsGameId(null); setStatsGame(null) }}
                 >×</button>
               </div>
               {statsLoading ? (
@@ -454,6 +530,93 @@ export default function HistoryPage() {
                   ))}
                 </div>
               ) : null}
+              {/* 封面操作按钮 */}
+              {!statsLoading && statsGame && (statsGame.cover_url || statsGame.cover_image_url) && (
+                <div style={{
+                  display: 'flex', gap: 10, marginTop: 18, paddingTop: 14,
+                  borderTop: '1px solid rgba(255,255,255,0.07)',
+                }}>
+                  <button
+                    onClick={handleViewCover}
+                    style={{
+                      flex: 1, padding: '8px 12px', borderRadius: 8,
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.85)', cursor: 'pointer', fontSize: 13,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+                      <path d="M1.5 8s2.5-5 6.5-5 6.5 5 6.5 5-2.5 5-6.5 5S1.5 8 1.5 8z" stroke="currentColor" strokeWidth="1.3"/>
+                      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                    </svg>
+                    查看故事封面
+                  </button>
+                  <button
+                    onClick={handleSaveCover}
+                    disabled={savingCover}
+                    style={{
+                      flex: 1, padding: '8px 12px', borderRadius: 8,
+                      border: 'none',
+                      background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+                      color: '#fff', cursor: savingCover ? 'wait' : 'pointer', fontSize: 13, fontWeight: 500,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    {savingCover ? (
+                      <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+                        <path d="M8 3v8M5 8l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M3 11v1.5A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                    保存故事封面
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── 故事封面预览弹窗 ── */}
+      <AnimatePresence>
+        {coverPreviewUrl && (
+          <>
+            <motion.div
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9100 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setCoverPreviewUrl(null)}
+            />
+            <motion.div
+              style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                zIndex: 9101, maxWidth: '92vw', maxHeight: '92vh',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+              }}
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <img
+                src={coverPreviewUrl}
+                alt="故事封面"
+                style={{
+                  maxWidth: '92vw', maxHeight: '82vh', borderRadius: 12,
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                  objectFit: 'contain', background: '#000',
+                }}
+              />
+              <button
+                onClick={() => setCoverPreviewUrl(null)}
+                style={{
+                  padding: '8px 22px', borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'rgba(0,0,0,0.5)', color: '#fff',
+                  cursor: 'pointer', fontSize: 13, backdropFilter: 'blur(6px)',
+                }}
+              >关闭</button>
             </motion.div>
           </>
         )}
