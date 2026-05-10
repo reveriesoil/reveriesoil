@@ -10,11 +10,19 @@ _backend_dir = r'c:\Users\Administrator\Desktop\Dream It\opensource\backend'
 
 block_cipher = None
 
+# ── rembg 模型权重打包：避免桌面用户首次运行需联网下载 176MB ──
+_u2net_local = os.path.join(os.path.expanduser('~'), '.u2net', 'u2net.onnx')
+_extra_datas = []
+if os.path.exists(_u2net_local):
+    # 打包后路径：sys._MEIPASS/u2net_models/u2net.onnx
+    # 运行时由 server.py 设置 U2NET_HOME 指向该目录
+    _extra_datas.append((_u2net_local, 'u2net_models'))
+
 a = Analysis(
     [os.path.join(_backend_dir, 'server.py')],
     pathex=[_backend_dir],
     binaries=[],
-    datas=[],
+    datas=_extra_datas,
     hiddenimports=[
         # ── asyncio / anyio ──────────────────────────────────────
         'anyio',
@@ -100,6 +108,7 @@ a = Analysis(
         'app.services.ai.voice_gen',
         'app.services.ai.jimeng_gen',
         'app.services.ai.seedream5_gen',
+        'app.services.ai.matting',
         'app.services.ai.orchestrator',
         'app.storage',
         'app.storage.local_storage',
@@ -115,6 +124,17 @@ a = Analysis(
         'PIL.ImageFilter',
         'PIL.ImageOps',
         'PIL._imaging',
+
+        # ── rembg 抠像（U2Net + onnxruntime）───────────────────────
+        'rembg',
+        'rembg.bg',
+        'rembg.session_factory',
+        'rembg.sessions',
+        'rembg.sessions.u2net',
+        'rembg.sessions.base',
+        'onnxruntime',
+        'onnxruntime.capi',
+        'onnxruntime.capi._pybind_state',
 
         # ── 其他常用标准库隐式导入 ────────────────────────────────
         'email.mime.multipart',

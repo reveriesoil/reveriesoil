@@ -491,10 +491,25 @@ export default function GeneratingPage() {
           <div className="gen-timeline-title">生成步骤</div>
           {STEPS.map((step, idx) => {
             const status = getStepStatus(step)
-            const record = stepHistory.find(s => s.step === step.key)
-            const duration = record?.completedAt
-              ? formatDuration(record.completedAt - record.startedAt)
+            // 优先用后端 step_timings（精确）；否则回退本地 polling 推断的 stepHistory
+            const serverTiming = task?.step_timings?.find(t => t.step === step.key)
+            let startedAt: number | undefined
+            let completedAt: number | undefined | null
+            let modelName: string | undefined
+            if (serverTiming) {
+              startedAt = serverTiming.started_at
+              completedAt = serverTiming.finished_at ?? undefined
+              modelName = serverTiming.model || undefined
+            } else {
+              const record = stepHistory.find(s => s.step === step.key)
+              startedAt = record?.startedAt
+              completedAt = record?.completedAt
+              modelName = record?.model
+            }
+            const duration = startedAt && completedAt
+              ? formatDuration(completedAt - startedAt)
               : null
+            const hasRecord = startedAt != null
 
             return (
               <div key={step.key} className={`gen-step gen-step-${status}`}>
@@ -517,14 +532,14 @@ export default function GeneratingPage() {
                     <span className="gen-step-icon">{step.icon}</span>
                     {step.label}
                     {duration && <span className="gen-step-duration">{duration}</span>}
-                    {record?.model && <span className="gen-step-model" title={`调用模型：${record.model}`}>{record.model}</span>}
+                    {modelName && <span className="gen-step-model" title={`调用模型：${modelName}`}>{modelName}</span>}
                     {status === 'active' && <span className="gen-step-badge-active">进行中</span>}
                   </div>
                   <div className="gen-step-desc">{step.desc}</div>
-                  {record && (
+                  {hasRecord && (
                     <div className="gen-step-time">
-                      开始于 {new Date(record.startedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      {record.completedAt && ` · 用时 ${duration}`}
+                      开始于 {new Date(startedAt!).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {completedAt && ` · 用时 ${duration}`}
                     </div>
                   )}
                 </div>

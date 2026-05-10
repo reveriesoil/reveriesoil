@@ -47,6 +47,13 @@ export interface TaskStatus {
   error_msg?: string
   script_ready?: boolean
   token_usage?: number
+  /** 后端记录的每步起止时间戳（epoch_ms）。前端优先用此计算 duration，避免 polling 间隔误差。*/
+  step_timings?: Array<{
+    step: string
+    started_at: number
+    finished_at: number | null
+    model?: string
+  }>
 }
 
 export interface GameSummary {

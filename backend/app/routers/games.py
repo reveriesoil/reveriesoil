@@ -23,6 +23,58 @@ from app.schemas import (
 
 EXPORT_FORMAT_VERSION = "1"   # 升级导出格式时递增
 
+
+def _now_ms() -> int:
+    """返回当前 epoch 毫秒时间戳（前端 Date.now() 同口径）。"""
+    import time
+    return int(time.time() * 1000)
+
+
+def _maybe_extend_step_timings(prev_json: Optional[str], new_step: str, new_model: Optional[str]) -> Optional[str]:
+    """根据现有 step_timings JSON 和新步骤，返回更新后的 JSON 字符串。
+
+    规则：
+    - 若新 step 与最后一项相同：仅在缺少 model 时补齐 model；返回新 JSON。
+    - 若 step 变化：把上一项的 finished_at 设为 now；append 新项 {step, started_at: now, finished_at: null, model}。
+    - 若未变化且无需补 model：返回 None（调用方可跳过 step_timings 字段更新）。
+    """
+    try:
+        timings = json.loads(prev_json) if prev_json else []
+        if not isinstance(timings, list):
+            timings = []
+    except Exception:
+        timings = []
+    now = _now_ms()
+    if timings and timings[-1].get("step") == new_step:
+        if new_model and not timings[-1].get("model"):
+            timings[-1]["model"] = new_model
+            return json.dumps(timings, ensure_ascii=False)
+        return None
+    if timings and timings[-1].get("finished_at") is None:
+        timings[-1]["finished_at"] = now
+    timings.append({
+        "step": new_step,
+        "started_at": now,
+        "finished_at": None,
+        "model": new_model or "",
+    })
+    return json.dumps(timings, ensure_ascii=False)
+
+
+def _finalize_step_timings(prev_json: Optional[str]) -> Optional[str]:
+    """任务终结（done/failed/cancelled）时，把最后一步的 finished_at 设为 now。返回新 JSON 或 None。"""
+    try:
+        timings = json.loads(prev_json) if prev_json else []
+        if not isinstance(timings, list) or not timings:
+            return None
+    except Exception:
+        return None
+    if timings[-1].get("finished_at") is None:
+        timings[-1]["finished_at"] = _now_ms()
+        return json.dumps(timings, ensure_ascii=False)
+    return None
+
+
 router = APIRouter(prefix="/games", tags=["games"])
 
 
@@ -651,6 +703,10 @@ async def _run_generation_bg(
 
     async def update_progress(step: str, progress: int, error: str = None, model: str = None):
         async with _Session() as db:
+            existing_row = await db.execute(
+                select(GenerationTask.step_timings).where(GenerationTask.id == task_id)
+            )
+            prev_timings = existing_row.scalar_one_or_none()
             values = {
                 "status": "running", "current_step": step,
                 "progress": progress, "updated_at": datetime.utcnow(),
@@ -661,6 +717,13 @@ async def _run_generation_bg(
             if error:
                 values["status"] = "failed"
                 values["error_msg"] = error
+                finalized = _finalize_step_timings(prev_timings)
+                if finalized is not None:
+                    values["step_timings"] = finalized
+            else:
+                new_timings = _maybe_extend_step_timings(prev_timings, step, model)
+                if new_timings is not None:
+                    values["step_timings"] = new_timings
             await db.execute(
                 update(GenerationTask).where(GenerationTask.id == task_id).values(**values)
             )
@@ -743,13 +806,21 @@ async def _run_generation_bg(
                     updated_at=datetime.utcnow(),
                 )
             )
+            # finalize step_timings：把最后一步的 finished_at 设为 now
+            _row = await db.execute(
+                select(GenerationTask.step_timings).where(GenerationTask.id == task_id)
+            )
+            _final_timings = _finalize_step_timings(_row.scalar_one_or_none())
+            _done_values = {
+                "status": "done", "progress": 100,
+                "current_step": "done",
+                "token_usage": _counter.get("total", 0),
+                "updated_at": datetime.utcnow(),
+            }
+            if _final_timings is not None:
+                _done_values["step_timings"] = _final_timings
             await db.execute(
-                update(GenerationTask).where(GenerationTask.id == task_id).values(
-                    status="done", progress=100,
-                    current_step="done",
-                    token_usage=_counter.get("total", 0),
-                    updated_at=datetime.utcnow(),
-                )
+                update(GenerationTask).where(GenerationTask.id == task_id).values(**_done_values)
             )
             await db.commit()
 
@@ -783,6 +854,10 @@ async def _run_image_regen_bg(game_id: str, task_id: str):
 
     async def update_progress(step: str, progress: int, error: str = None, model: str = None):
         async with _Session() as db:
+            existing_row = await db.execute(
+                select(GenerationTask.step_timings).where(GenerationTask.id == task_id)
+            )
+            prev_timings = existing_row.scalar_one_or_none()
             values = {
                 "status": "running", "current_step": step,
                 "progress": progress, "updated_at": datetime.utcnow(),
@@ -792,6 +867,13 @@ async def _run_image_regen_bg(game_id: str, task_id: str):
             if error:
                 values["status"] = "failed"
                 values["error_msg"] = error
+                finalized = _finalize_step_timings(prev_timings)
+                if finalized is not None:
+                    values["step_timings"] = finalized
+            else:
+                new_timings = _maybe_extend_step_timings(prev_timings, step, model)
+                if new_timings is not None:
+                    values["step_timings"] = new_timings
             await db.execute(
                 update(GenerationTask).where(GenerationTask.id == task_id).values(**values)
             )
@@ -886,12 +968,19 @@ async def _run_image_regen_bg(game_id: str, task_id: str):
                     updated_at=datetime.utcnow(),
                 )
             )
+            _row2 = await db.execute(
+                select(GenerationTask.step_timings).where(GenerationTask.id == task_id)
+            )
+            _final_timings2 = _finalize_step_timings(_row2.scalar_one_or_none())
+            _done_values2 = {
+                "status": "done", "progress": 100,
+                "current_step": "done",
+                "updated_at": datetime.utcnow(),
+            }
+            if _final_timings2 is not None:
+                _done_values2["step_timings"] = _final_timings2
             await db.execute(
-                update(GenerationTask).where(GenerationTask.id == task_id).values(
-                    status="done", progress=100,
-                    current_step="done",
-                    updated_at=datetime.utcnow(),
-                )
+                update(GenerationTask).where(GenerationTask.id == task_id).values(**_done_values2)
             )
             await db.commit()
 

@@ -575,14 +575,12 @@ async def generate_portrait(
     raw_bytes = await _generate(access_key, secret_key, payload)
 
     try:
-        # 先抠绿幕（含角色内部绿色区域）
-        png_bytes = _remove_chroma_key(raw_bytes)
-        # 再提取最大单角色区域（防止多角色出现在同一张图）
-        png_bytes = _extract_main_character(png_bytes)
+        from app.services.ai.matting import cutout_portrait
+        png_bytes = cutout_portrait(raw_bytes)
         logger.info(f"立绘抠图完成: {character_appearance[:30]}")
         return png_bytes
     except Exception as e:
-        logger.warning(f"绿幕抠图失败，返回原图: {e}")
+        logger.warning(f"立绘抠图失败，返回原图: {e}")
         return raw_bytes
 
 

@@ -12,6 +12,10 @@ if getattr(sys, 'frozen', False):
     # 确保 app 包可以被找到
     if base_dir not in sys.path:
         sys.path.insert(0, base_dir)
+    # 让 rembg 直接用打包内的 u2net.onnx，避免首次运行联网下载 176MB
+    _bundled_u2net_dir = os.path.join(base_dir, 'u2net_models')
+    if os.path.isdir(_bundled_u2net_dir) and not os.environ.get('U2NET_HOME'):
+        os.environ['U2NET_HOME'] = _bundled_u2net_dir
 
 import uvicorn  # noqa: E402（必须在 sys.path 修改后导入）
 from app.main import app  # noqa: E402

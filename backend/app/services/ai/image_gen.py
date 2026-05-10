@@ -88,9 +88,8 @@ async def generate_portrait(
     )
     raw = await _dispatch(prompt, "portrait", api_key, model, endpoint, quality="standard")
     try:
-        from app.services.ai.jimeng_gen import _remove_chroma_key, _extract_main_character
-        png_bytes = _remove_chroma_key(raw)
-        return _extract_main_character(png_bytes)
+        from app.services.ai.matting import cutout_portrait
+        return cutout_portrait(raw)
     except Exception:
         return raw
 

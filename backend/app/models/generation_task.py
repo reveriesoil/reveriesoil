@@ -20,6 +20,9 @@ class GenerationTask(Base):
     current_model = Column(String(100))
     error_msg = Column(Text)
     token_usage = Column(Integer, default=0)
+    # 每步起止时间戳（JSON 字符串），格式：[{"step": "outline", "started_at": <epoch_ms>, "finished_at": <epoch_ms>|null, "model": "..."}, ...]
+    # 由 update_progress 在 step 切换时维护；前端用此渲染精确耗时，告别 polling 间隔误差。
+    step_timings = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

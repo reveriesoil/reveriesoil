@@ -37,6 +37,8 @@ class TaskStatusResponse(BaseModel):
     current_model: Optional[str] = None
     error_msg: Optional[str] = None
     token_usage: Optional[int] = 0
+    # 每步起止时间戳（后端为 JSON 字符串，接口输出为数组）
+    step_timings: Optional[List[Dict[str, Any]]] = None
 
     class Config:
         from_attributes = True

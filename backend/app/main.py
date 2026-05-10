@@ -42,6 +42,15 @@ async def lifespan(app: FastAPI):
         await conn.execute(text("PRAGMA journal_mode=WAL"))
         await conn.execute(text("PRAGMA busy_timeout=30000"))
         await conn.run_sync(Base.metadata.create_all)
+        # 兼容老库：generation_tasks 缺少 step_timings 列时自动补上（v0.6.6+）
+        try:
+            cols = await conn.execute(text("PRAGMA table_info(generation_tasks)"))
+            existing = {row[1] for row in cols.fetchall()}
+            if "step_timings" not in existing:
+                await conn.execute(text("ALTER TABLE generation_tasks ADD COLUMN step_timings TEXT"))
+                logger.info("迁移：generation_tasks 已添加 step_timings 列")
+        except Exception as _mig_e:
+            logger.warning(f"step_timings 列迁移失败（可忽略）: {_mig_e}")
     os.makedirs(settings.static_dir, exist_ok=True)
     logger.info(f"数据库初始化完成（WAL 模式），静态文件目录: {settings.static_dir}")
 

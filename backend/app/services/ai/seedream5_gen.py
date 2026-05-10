@@ -169,15 +169,14 @@ async def generate_portrait(
 
     logger.info(f"Seedream5立绘生成: {character_appearance[:40]} [{expression}]")
     raw_bytes = await _generate(api_key, prompt, _SIZE_PORTRAIT, output_format="png")
-    # 复用 jimeng_gen 的绿幕抠图与主体提取，保持不同 provider 立绘渲染一致
+    # 统一抠像入口（rembg 优先，色域抠图回退），保持不同 provider 立绘渲染一致
     try:
-        from app.services.ai.jimeng_gen import _remove_chroma_key, _extract_main_character
-        png_bytes = _remove_chroma_key(raw_bytes)
-        png_bytes = _extract_main_character(png_bytes)
+        from app.services.ai.matting import cutout_portrait
+        png_bytes = cutout_portrait(raw_bytes)
         logger.info(f"Seedream5 立绘抠图完成: {character_appearance[:30]}")
         return png_bytes
     except Exception as e:
-        logger.warning(f"Seedream5 绿幕抠图失败，返回原图: {e}")
+        logger.warning(f"Seedream5 立绘抠图失败，返回原图: {e}")
         return raw_bytes
 
 
