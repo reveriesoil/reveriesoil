@@ -484,10 +484,17 @@ export default function HistoryPage() {
               transition={{ duration: 0.15 }}
                 onClick={() => { setStatsGameId(null); setStatsGame(null) }}
             />
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9001,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
             <motion.div
               style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-                zIndex: 9001, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+                pointerEvents: 'auto',
+                background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 16, padding: '20px 24px', width: '90%', maxWidth: 380,
                 boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
               }}
@@ -586,6 +593,7 @@ export default function HistoryPage() {
                 </div>
               )}
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
@@ -600,10 +608,17 @@ export default function HistoryPage() {
               transition={{ duration: 0.18 }}
               onClick={() => setCoverPreviewUrl(null)}
             />
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 9101,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
             <motion.div
               style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-                zIndex: 9101, maxWidth: '92vw', maxHeight: '92vh',
+                pointerEvents: 'auto',
+                maxWidth: '92vw', maxHeight: '92vh',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               }}
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
@@ -628,6 +643,7 @@ export default function HistoryPage() {
                 }}
               >关闭</button>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
@@ -653,10 +669,17 @@ export default function HistoryPage() {
                 transition={{ duration: 0.15 }}
                 onClick={() => !retrying && setRetryConfirmGame(null)}
               />
+              <div
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 9001,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
               <motion.div
                 style={{
-                  position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-                  zIndex: 9001, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
+                  pointerEvents: 'auto',
+                  background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 16, padding: '24px', width: '90%', maxWidth: 360,
                   boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
                 }}
@@ -698,6 +721,7 @@ export default function HistoryPage() {
                   </button>
                 </div>
               </motion.div>
+              </div>
             </>
           )
         })()}
