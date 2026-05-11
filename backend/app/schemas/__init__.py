@@ -17,6 +17,7 @@ class AIModelConfig(BaseModel):
     model: str
     api_key: Optional[str] = ""
     endpoint: Optional[str] = None
+    portrait_sprite_sheet: Optional[bool] = None  # 人物模型生成优化：单次调用生成多表情 sprite sheet 后切分（仅对 Doubao Seedream 5.0 等先进模型生效）
 
 
 class GenerateRequest(BaseModel):

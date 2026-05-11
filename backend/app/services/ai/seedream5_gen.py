@@ -59,6 +59,7 @@ async def _generate(
     size: str,
     output_format: Optional[str] = "png",
     retries: int = 2,
+    model_id: Optional[str] = None,
 ) -> bytes:
     """
     调用 Seedream 5.0 生成单张图片，返回图像字节。
@@ -74,7 +75,7 @@ async def _generate(
                     "Content-Type": "application/json",
                 }
                 payload = {
-                    "model": _MODEL_ID,
+                    "model": model_id or _MODEL_ID,
                     "prompt": prompt,
                     "size": size,
                     "response_format": "url",

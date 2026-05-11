@@ -7,6 +7,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from app.services.ai import AccountOverdueError, image_gen, jimeng_gen, seedream5_gen, text_gen, voice_gen
+from app.services.ai import sprite_sheet_gen
 from app.services.ai.text_gen import (
     generate_outline,
     validate_and_refine,
@@ -282,11 +283,23 @@ class GenerationOrchestrator:
         await self.update_progress("portraits", 30, model=_img_model)
         # 仅生成剧本中实际用到的表情（保留 normal 兜底）
         _used_exprs = _collect_used_expressions(scenes)
-        portrait_tasks = [
-            self._generate_portrait(char, expr, global_style, image_cfg, game_id, assets_manifest)
-            for char in characters
-            for expr in _expressions_for_char(char, _used_exprs)
-        ]
+        _sprite_mode = bool(image_cfg.get("portrait_sprite_sheet", False))
+        _sprite_supported = (
+            image_cfg.get("provider") == "doubao"
+            and _img_model in ("doubao-seedream-4-5-251128", "doubao-seedream-5-0-260128")
+        )
+        portrait_tasks = []
+        for char in characters:
+            char_exprs = _expressions_for_char(char, _used_exprs)
+            if _sprite_mode and _sprite_supported and len(char_exprs) >= 2:
+                portrait_tasks.append(self._generate_portrait_sheet(
+                    char, char_exprs, global_style, image_cfg, game_id, assets_manifest,
+                ))
+            else:
+                for expr in char_exprs:
+                    portrait_tasks.append(self._generate_portrait(
+                        char, expr, global_style, image_cfg, game_id, assets_manifest,
+                    ))
         if portrait_tasks:
             _portrait_results = await asyncio.gather(*portrait_tasks, return_exceptions=True)
             _raise_if_overdraft(_portrait_results)
@@ -451,13 +464,29 @@ class GenerationOrchestrator:
 
         # 仅生成剧本中实际用到的表情（保留 normal 兜底）
         _used_exprs = _collect_used_expressions(scenes)
-        portrait_tasks = [
-            self._generate_portrait(char, expr, global_style, image_cfg, game_id, assets_manifest)
-            for char in characters
-            for expr in _expressions_for_char(char, _used_exprs)
-            # 跳过已有 URL 的立绘
-            if not assets_manifest["portraits"].get(char.get("id", ""), {}).get(expr)
-        ]
+        _sprite_mode = bool(image_cfg.get("portrait_sprite_sheet", False))
+        _sprite_supported = (
+            image_cfg.get("provider") == "doubao"
+            and _img_model in ("doubao-seedream-4-5-251128", "doubao-seedream-5-0-260128")
+        )
+        portrait_tasks = []
+        for char in characters:
+            char_id = char.get("id", "")
+            char_exprs = [
+                e for e in _expressions_for_char(char, _used_exprs)
+                if not assets_manifest["portraits"].get(char_id, {}).get(e)
+            ]
+            if not char_exprs:
+                continue
+            if _sprite_mode and _sprite_supported and len(char_exprs) >= 2:
+                portrait_tasks.append(self._generate_portrait_sheet(
+                    char, char_exprs, global_style, image_cfg, game_id, assets_manifest,
+                ))
+            else:
+                for expr in char_exprs:
+                    portrait_tasks.append(self._generate_portrait(
+                        char, expr, global_style, image_cfg, game_id, assets_manifest,
+                    ))
         if portrait_tasks:
             _p_results = await asyncio.gather(*portrait_tasks, return_exceptions=True)
             _raise_if_overdraft(_p_results)
@@ -542,6 +571,61 @@ class GenerationOrchestrator:
             manifest.setdefault("_last_image_error", str(e))
             logger.warning(f"立绘生成失败 {char_id}/{expr}: {e}")
         manifest["portraits"].setdefault(char_id, {})[expr] = ""
+
+    async def _generate_portrait_sheet(self, char, expressions, global_style, image_cfg, game_id, manifest):
+        """人物模型生成优化：单次调用生成多表情 sprite sheet 后切分。
+        仅在 provider=doubao 且 model 为 Seedream 4.5/5.0 时启用。
+        失败时回退到逐表情独立生成。
+        """
+        char_id = char["id"]
+        model = image_cfg.get("model", "")
+        api_key = image_cfg.get("api_key", "")
+        appearance = (
+            char.get("base_prompt")
+            or char.get("appearance")
+            or char.get("appearance_en")
+            or ""
+        )
+        batches = sprite_sheet_gen.chunk_expressions(list(expressions))
+        try:
+            for batch in batches:
+                if len(batch) < 2:
+                    await self._generate_portrait(
+                        char, batch[0], global_style, image_cfg, game_id, manifest
+                    )
+                    continue
+                expr_to_bytes = await sprite_sheet_gen.generate_portrait_sprite_sheet(
+                    api_key=api_key,
+                    character_appearance=appearance,
+                    expressions=batch,
+                    global_style=global_style,
+                    model_id=model,
+                )
+                for expr, data in expr_to_bytes.items():
+                    if not data:
+                        manifest["portraits"].setdefault(char_id, {})[expr] = ""
+                        continue
+                    key = f"games/{game_id}/portraits/{char_id}_{expr}.png"
+                    url = await upload_bytes(data, key, "image/png")
+                    manifest["portraits"].setdefault(char_id, {})[expr] = url
+            return
+        except Exception as e:
+            _check_overdraft(e)
+            logger.warning(
+                f"sprite_sheet 立绘生成失败({model}) {char_id}: {e}，回退到逐表情生成"
+            )
+            manifest.setdefault("_last_image_error", str(e))
+            for expr in expressions:
+                if manifest["portraits"].get(char_id, {}).get(expr):
+                    continue
+                try:
+                    await self._generate_portrait(
+                        char, expr, global_style, image_cfg, game_id, manifest
+                    )
+                except Exception as ee:
+                    _check_overdraft(ee)
+                    logger.warning(f"sprite_sheet 回退仍失败 {char_id}/{expr}: {ee}")
+                    manifest["portraits"].setdefault(char_id, {})[expr] = ""
 
     async def _generate_background(self, scene, global_style, image_cfg, game_id, manifest):
         scene_id = scene["id"]

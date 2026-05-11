@@ -262,6 +262,7 @@ export default function SettingsModal({ open, onClose }: { open: boolean; onClos
   const [imageSkipped, setImageSkipped] = useState(false)
   const [voiceSkipped, setVoiceSkipped] = useState(true)
   const [tokenSaveMode, setTokenSaveMode] = useState(false)
+  const [portraitSpriteSheet, setPortraitSpriteSheet] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [agentEnabled, setAgentEnabled] = useState<Record<string, boolean>>({})
   const [agentOverrides, setAgentOverrides] = useState<Record<string, ModelValue>>({})
@@ -285,6 +286,7 @@ export default function SettingsModal({ open, onClose }: { open: boolean; onClos
         setImage(emptyModel()); setImageSkipped(true)
       }
       setTokenSaveMode(!!(im as unknown as Record<string, unknown>).token_save_mode)
+      setPortraitSpriteSheet(!!(im as unknown as Record<string, unknown>).portrait_sprite_sheet)
       if (vm.model || vm.endpoint || vm.api_key) {
         setVoice({ provider: 'custom', model: vm.model ?? '', api_key: vm.api_key ?? '', endpoint: vm.endpoint ?? '' })
         setVoiceSkipped(false)
@@ -332,7 +334,7 @@ export default function SettingsModal({ open, onClose }: { open: boolean; onClos
         text_model: text,
         image_model: imageSkipped
           ? { provider: 'custom', model: '', api_key: '', endpoint: '' }
-          : ({ ...(image as unknown as Record<string, unknown>), token_save_mode: tokenSaveMode }) as unknown as typeof image,
+          : ({ ...(image as unknown as Record<string, unknown>), token_save_mode: tokenSaveMode, portrait_sprite_sheet: portraitSpriteSheet }) as unknown as typeof image,
         voice_model: voiceSkipped
           ? { provider: 'custom', model: '', api_key: '', endpoint: '' }
           : voice,
@@ -486,6 +488,38 @@ export default function SettingsModal({ open, onClose }: { open: boolean; onClos
                       <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #fff)', lineHeight: 1.3 }}>Token 节省模式</div>
                       <div style={{ fontSize: '11.5px', color: 'var(--text-secondary, rgba(255,255,255,0.5))', marginTop: '3px', lineHeight: 1.5 }}>
                         开启后，视觉效果相同的场景将共用同一张背景图，减少约 40% 的图片 API 调用，适合 Token 较紧张时使用
+                      </div>
+                    </div>
+                  </label>
+                </section>
+              )}
+
+              {!imageSkipped && (
+                <section className="sm-section sm-section--compact" style={{ marginTop: '-8px', paddingTop: '12px', borderTop: 'none' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', padding: '0 2px' }}>
+                    <span
+                      onClick={() => setPortraitSpriteSheet(s => !s)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '36px', height: '20px', borderRadius: '10px', flexShrink: 0, marginTop: '2px',
+                        background: portraitSpriteSheet ? 'var(--accent, #7c6af7)' : 'var(--border, rgba(255,255,255,0.12))',
+                        transition: 'background 0.18s', cursor: 'pointer',
+                        position: 'relative',
+                      }}
+                      role="switch" aria-checked={portraitSpriteSheet}
+                    >
+                      <span style={{
+                        position: 'absolute',
+                        left: portraitSpriteSheet ? '18px' : '3px',
+                        width: '14px', height: '14px', borderRadius: '50%',
+                        background: '#fff', transition: 'left 0.18s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      }} />
+                    </span>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #fff)', lineHeight: 1.3 }}>人物模型生成优化（对先进模型更佳）</div>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-secondary, rgba(255,255,255,0.5))', marginTop: '3px', lineHeight: 1.5 }}>
+                        开启后，同一角色的多个表情将合并为一次图像调用（sprite sheet 后切分），显著降低 API 成本并提升表情间的一致性。仅对豆包 Seedream 5.0 等先进模型生效。
                       </div>
                     </div>
                   </label>
