@@ -175,6 +175,13 @@ a = Analysis(
         'tensorflow', 'jax', 'sklearn',
         'onnx', 'onnxruntime.tools',
         'rembg.commands', 'filetype',
+        # ↓ scipy 的 array_api_compat 兼容层会尝试 import torch/cupy/dask/jax，必须排除
+        'scipy._lib.array_api_compat.torch',
+        'scipy._lib.array_api_compat.cupy',
+        'scipy._lib.array_api_compat.dask',
+        'scipy._lib.array_api_compat.dask.array',
+        'scipy._lib.array_api_compat.jax',
+        'dask', 'dask.array', 'cupy',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
