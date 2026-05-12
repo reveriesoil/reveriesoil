@@ -1,5 +1,5 @@
 """
-sprite_sheet_gen.py — 单次调用生成多表情 sprite sheet 后切分立绘（开源版）
+sprite_sheet_gen.py — 单次调用生成多表情 sprite sheet 后切分立绘
 
 用途：
   传统流程 N 角色 × M 表情 = N×M 次图像 API 调用，且每次表情独立生成
@@ -10,11 +10,16 @@ sprite_sheet_gen.py — 单次调用生成多表情 sprite sheet 后切分立绘
 
 约束：
   - 仅适用于支持高分辨率（≥3686400 像素）+ 强一致性的先进模型
-    （Doubao Seedream 5.0 已实测）
-  - K=4 时 size = 4096x2048，每格 1024x2048
+    （Doubao Seedream 4.5 / 5.0 已实测）
+  - K=4 时 size = 4096x2048，每格 1024x2048（接近原 1600x2848 9:16 比例）
   - K=3 时 size = 3072x2048，每格 1024x2048
   - K=2 时 size = 2048x2048，每格 1024x2048
   - K=1 时直接降级走 seedream5_gen.generate_portrait
+  - 提示词强调"每个角色完全位于格内，留有安全边距，禁止超出格边缘"
+
+失败处理：
+  - sheet 调用失败 → 返回空字典，调用方应回退到逐表情生成
+  - 单格切分/抠图失败 → 返回该表情对应 url=""，其他表情正常返回
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PIL import Image
 
@@ -31,9 +36,10 @@ from app.services.ai.seedream5_gen import _generate as _seedream_generate
 logger = logging.getLogger(__name__)
 
 
+# 每格 1024x2048（9:16 接近 1:2 略宽于 16:9 直版），便于全身立绘
 _CELL_W = 1024
 _CELL_H = 2048
-_MAX_CELLS = 4
+_MAX_CELLS = 4  # 单次最多 4 表情，超过则需调用方分批
 
 _EXPRESSION_MAP = {
     "normal":    "calm and natural expression",
@@ -78,13 +84,16 @@ def _build_sheet_prompt(
 
 
 def _split_sheet(image_bytes: bytes, n_cells: int) -> List[bytes]:
+    """等宽切分。返回 n_cells 张 PNG bytes（保持原图色彩，不强制 resize）。"""
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     w, h = img.size
     cell_w = w // n_cells
     out: List[bytes] = []
     for i in range(n_cells):
         x0 = i * cell_w
+        # 最后一格吃掉余数
         x1 = w if i == n_cells - 1 else (i + 1) * cell_w
+        # 内缩 8 px 去除边缘可能残留的黑色分隔线
         inset = 8
         l = x0 + inset if i > 0 else x0
         r = x1 - inset if i < n_cells - 1 else x1
@@ -102,10 +111,15 @@ async def generate_portrait_sprite_sheet(
     global_style: str,
     model_id: str,
 ) -> Dict[str, bytes]:
+    """
+    单次调用生成 K 表情 sprite sheet 并切分。
+    返回 {expression: png_bytes(已抠绿)}。失败角色对应 value 不出现。
+    """
     expressions = [e for e in expressions if e]
     if not expressions:
         return {}
     if len(expressions) > _MAX_CELLS:
+        # 调用方应该分批；这里强制截断兜底
         logger.warning(
             f"sprite_sheet expressions={len(expressions)} 超过单批上限 {_MAX_CELLS}，截断"
         )
@@ -120,15 +134,25 @@ async def generate_portrait_sprite_sheet(
         f"[sprite_sheet] model={model_id} size={size} expressions={expressions} "
         f"appearance={character_appearance[:40]}"
     )
-    sheet_bytes = await _seedream_generate(
-        api_key=api_key,
-        prompt=prompt,
-        size=size,
-        output_format=None,
-        model_id=model_id,
-    )
-    cells = _split_sheet(sheet_bytes, n)
+    try:
+        sheet_bytes = await _seedream_generate(
+            api_key=api_key,
+            prompt=prompt,
+            size=size,
+            output_format=None,  # 4.5/5.0 兼容
+            model_id=model_id,
+        )
+    except Exception as e:
+        logger.warning(f"[sprite_sheet] 生成失败 model={model_id}: {e}")
+        raise
 
+    try:
+        cells = _split_sheet(sheet_bytes, n)
+    except Exception as e:
+        logger.warning(f"[sprite_sheet] 切分失败: {e}")
+        raise
+
+    # 每格独立抠绿
     from app.services.ai.matting import cutout_portrait
     out: Dict[str, bytes] = {}
     for expr, cell_bytes in zip(expressions, cells):
@@ -137,10 +161,12 @@ async def generate_portrait_sprite_sheet(
             out[expr] = png
         except Exception as e:
             logger.warning(f"[sprite_sheet] 单元抠图失败 expr={expr}: {e}")
+            # 抠图失败时保留原图，仍可用
             out[expr] = cell_bytes
     return out
 
 
 def chunk_expressions(expressions: List[str], chunk: int = _MAX_CELLS) -> List[List[str]]:
+    """把表情列表按 chunk 切分（默认 4），便于多次调用。"""
     expressions = [e for e in expressions if e]
     return [expressions[i:i + chunk] for i in range(0, len(expressions), chunk)]

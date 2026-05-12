@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { removeBackground } from '../utils/removeBackground'
+import React from 'react'
 
 interface PortraitImageProps {
   src?: string
@@ -8,29 +7,12 @@ interface PortraitImageProps {
 }
 
 /**
- * 立绘图片组件：自动在客户端进行背景去除。
- * - 先显示原图（避免等待感）
- * - 后台异步处理，处理完毕后无缝替换为透明版本
- * - 结果缓存，同一 URL 只计算一次
+ * 立绘图片组件：
+ * 直接渲染服务端在打包阶段已抠图（透明 PNG）的立绘 URL。
+ * 服务端 `app/services/ai/matting.py::cutout_portrait` 在生成立绘时已彻底去除绿幕，
+ * 客户端无需再做任何抠图，避免出现「先显示绿幕、再切换透明」的闪烁。
  */
 export default function PortraitImage({ src, className, alt }: PortraitImageProps) {
-  const [displaySrc, setDisplaySrc] = useState<string | undefined>(src)
-  const latestUrl = useRef<string | undefined>()
-
-  useEffect(() => {
-    if (!src) { setDisplaySrc(undefined); return }
-
-    // 立即显示原图（无延迟）
-    setDisplaySrc(src)
-    latestUrl.current = src
-
-    removeBackground(src).then(processed => {
-      // 确保 URL 未在异步期间切换
-      if (latestUrl.current === src) setDisplaySrc(processed)
-    })
-  }, [src])
-
-  if (!displaySrc) return null
-
-  return <img src={displaySrc} className={className} alt={alt} />
+  if (!src) return null
+  return <img src={src} className={className} alt={alt} />
 }
